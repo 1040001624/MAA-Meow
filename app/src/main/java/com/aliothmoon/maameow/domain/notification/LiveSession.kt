@@ -27,7 +27,15 @@ data class LiveCapability(
     val promotedGranted: Boolean,
     val focusLikely: Boolean,
     val focusGranted: Boolean,
-)
+) {
+    /** 原生实时更新要 16+，超级岛不看系统版本 */
+    val liveSupported: Boolean
+        get() = promotedAvailable || focusLikely
+
+    /** 样式页有可生效的项：标准通知栏在 16 以下退化为系统进度条，颜色与图标都不生效 */
+    val styleConfigurable: Boolean
+        get() = backend != LiveBackend.PLAIN || promotedAvailable
+}
 
 data class LiveSession(
     val sessionId: String,
@@ -35,6 +43,8 @@ data class LiveSession(
     val title: String,
     val text: String,
     val capsuleText: String,
+    /** 当前任务名；链未登记时为 null，与兜底后的 [title] 区分 */
+    val taskName: String? = null,
     val progressCurrent: Int? = null,
     val progressMax: Int? = null,
     /** 任务计数文案，如 "2/5"；岛左栏用它替代百分比 */
@@ -47,7 +57,10 @@ data class LiveSession(
     val alert: Boolean = false,
 ) {
     fun fingerprint(): String =
-        "$sessionId|$title|$text|$capsuleText|$progressCurrent|$progressMax|$progressLabel|$ongoing|$isError"
+        "$sessionId|$title|$text|$capsuleText|$taskName|$progressCurrent|$progressMax|$progressLabel|$ongoing|$isError"
+
+    /** 正文去掉 "n/m · " 前缀后的状态行 */
+    fun statusLine(): String = progressLabel?.let { text.removePrefix("$it · ") } ?: text
 
     fun progressPercent(): Int? {
         val cur = progressCurrent ?: return null

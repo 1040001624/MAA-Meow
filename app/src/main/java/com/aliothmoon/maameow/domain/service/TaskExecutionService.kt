@@ -69,6 +69,7 @@ class TaskExecutionService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var progressJob: Job? = null
+    private var renderJob: Job? = null
     private var boundToken: Long = 0L
     private var observeToken: Long = 0L
 
@@ -91,6 +92,7 @@ class TaskExecutionService : Service() {
             return
         }
         ensureObserveProgress()
+        ensureObserveRenderChanges()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -106,6 +108,7 @@ class TaskExecutionService : Service() {
             handleTerminalState(boundToken, snapshot)
         } else {
             ensureObserveProgress()
+            ensureObserveRenderChanges()
         }
         return START_NOT_STICKY
     }
@@ -266,6 +269,7 @@ class TaskExecutionService : Service() {
             title = title,
             text = contentText,
             capsuleText = capsule,
+            taskName = activeName,
             progressCurrent = progress.current,
             progressMax = progress.max,
             progressLabel = progress.label,
@@ -274,6 +278,14 @@ class TaskExecutionService : Service() {
             timeoutSec = 86_400,
             isError = snapshot.state == MaaExecutionState.ERROR || progress.hasTaskError,
         )
+    }
+
+    /** 样式或后端设置变化时重发当前进度，不等下一次任务事件 */
+    private fun ensureObserveRenderChanges() {
+        if (renderJob?.isActive == true) return
+        renderJob = serviceScope.launch {
+            liveCoordinator.renderChanges.collect { liveCoordinator.republishProgress(boundToken) }
+        }
     }
 
     private fun defaultStatusText(state: MaaExecutionState): String = when (state) {

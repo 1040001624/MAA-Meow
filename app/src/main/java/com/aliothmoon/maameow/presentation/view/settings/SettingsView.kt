@@ -162,6 +162,7 @@ fun SettingsView(
     val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
+    val liveUpdateEntryVisible by viewModel.liveUpdateEntryVisible.collectAsStateWithLifecycle()
     val deployWithPause by viewModel.deployWithPause.collectAsStateWithLifecycle()
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
     val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
@@ -962,6 +963,16 @@ fun SettingsView(
                             contentColor = contentColor
                         ) {
                             navController.navigate(Routes.NOTIFICATION)
+                        }
+                        if (liveUpdateEntryVisible) {
+                            ListItemDivider()
+                            SettingClickItem(
+                                title = stringResource(R.string.settings_live_update_title),
+                                description = stringResource(R.string.settings_live_update_desc),
+                                contentColor = contentColor
+                            ) {
+                                navController.navigate(Routes.LIVE_UPDATE)
+                            }
                         }
                     }
                 }

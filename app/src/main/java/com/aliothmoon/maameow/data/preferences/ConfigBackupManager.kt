@@ -86,7 +86,7 @@ class ConfigBackupManager(
 
         /**
          * 导出时剥离设备本地字段：CDK、解锁 PIN 与一图流 Token 属敏感信息；
-         * 自定义背景的开关与令牌对应本机 filesDir 下的图片文件，在其他设备上不存在。
+         * 自定义背景与实况图标对应本机 filesDir 下的图片文件，在其他设备上不存在。
          */
         private fun AppSettings.sanitized() = copy(
             mirrorChyanCdk = "",
@@ -95,13 +95,21 @@ class ConfigBackupManager(
             operBoxUseYituliuApi = "false",
             customBackgroundEnabled = "false",
             customBackgroundToken = "",
-        )
+        ).withoutCustomTrackerIcon()
 
         /**
          * 导入时对已废弃或非法的旧值做归一化，避免后续读取时违反非空约束。
          */
         private fun AppSettings.normalizedForImport() = copy(
-            shizukuLaunchPackage = shizukuLaunchPackage.ifBlank { OFFICIAL_SHIZUKU_PACKAGE }
+            shizukuLaunchPackage = shizukuLaunchPackage.ifBlank { OFFICIAL_SHIZUKU_PACKAGE },
+        ).withoutCustomTrackerIcon()
+
+        /** 自定义图标文件只在本机，路径清空，CUSTOM 回落默认 */
+        private fun AppSettings.withoutCustomTrackerIcon() = copy(
+            liveUpdateCustomTrackerPath = "",
+            liveUpdateTrackerIcon = liveUpdateTrackerIcon.takeUnless {
+                it.equals(AppSettingsManager.LiveUpdateTrackerIcon.CUSTOM.name, ignoreCase = true)
+            } ?: AppSettingsManager.LiveUpdateTrackerIcon.DEFAULT.name,
         )
 
         /**

@@ -6,7 +6,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.os.Bundle
 import androidx.core.graphics.drawable.toBitmap
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager.LiveUpdateChipContent
 import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveCategory
@@ -23,8 +23,9 @@ class HyperOsFocusPublisher(
     private val factory: LiveNotificationFactory,
     private val sequenceStore: FocusSequenceStore,
     private val xmsfGate: XmsfNetworkGate,
-    private val appSettings: AppSettingsManager,
     promotedDetector: AospPromotedDetector,
+    private val style: LiveUpdateStyle,
+    private val trackerIcons: TrackerIconStore,
 ) : LiveUpdatePublisher {
 
     private val appContext = context.applicationContext
@@ -79,7 +80,7 @@ class HyperOsFocusPublisher(
         val firstResultFloat = session.category == LiveCategory.RESULT &&
                 session.firstFloat &&
                 !isHeld()
-        if (firstResultFloat && bypassEnabled()) {
+        if (firstResultFloat) {
             xmsfGate.pulse { plain.notifyOrSkip(session.sessionId, notification) }
         } else {
             plain.notifyOrSkip(session.sessionId, notification)
@@ -92,7 +93,6 @@ class HyperOsFocusPublisher(
     private fun isHeld(): Boolean = synchronized(holdLock) { progressHeld }
 
     private fun holdProgress() {
-        if (!bypassEnabled()) return
         // 先置位再 acquire，保证 acquire/release 严格配对
         synchronized(holdLock) {
             if (progressHeld) return
@@ -100,6 +100,8 @@ class HyperOsFocusPublisher(
         }
         xmsfGate.acquire()
     }
+
+    override fun onDeactivated() = releaseProgress()
 
     private fun releaseProgress() {
         val held = synchronized(holdLock) {
@@ -109,9 +111,6 @@ class HyperOsFocusPublisher(
         }
         if (held) xmsfGate.release()
     }
-
-    /** 用户可关：关掉后小米设备上岛会被云端鉴权摘除，退化为普通通知 */
-    private fun bypassEnabled(): Boolean = appSettings.liveIslandXmsfBypass.value
 
     private fun assemble(session: LiveSession): Notification {
         val extras = runCatching { buildFocusExtras(session) }
@@ -138,14 +137,16 @@ class HyperOsFocusPublisher(
             .take(16)
         val headline = session.title.take(40)
         val body = session.text.take(80)
-        val aod = when {
-            session.category == LiveCategory.RESULT -> session.capsuleText.take(8)
-            percent != null -> "$percent%"
-            else -> "…"
+        val island = islandTexts(session, percent)
+        val aod = if (session.category == LiveCategory.RESULT) {
+            session.capsuleText.take(8)
+        } else {
+            island.aod
         }
         return FocusNotification.buildV3 {
+            val progressColor = style.progressColorHexOrNull(session.isError) ?: PROGRESS_COLOR
             val appPic = createPicture(PIC_PROGRESS_APP, icon)
-            val capsulePic = createPicture(PIC_PROGRESS_CAPSULE, icon)
+            val capsulePic = createPicture(PIC_PROGRESS_CAPSULE, trackerIcon() ?: icon)
             business = if (session.category == LiveCategory.PROGRESS) {
                 BUSINESS_PROGRESS
             } else {
@@ -158,7 +159,7 @@ class HyperOsFocusPublisher(
             timeout = (timeoutSec / 60).coerceAtLeast(5)
             sequence = sequenceStore.next(notifyId)
             aodTitle = aod
-            ticker = "$headline $aod".take(40)
+            ticker = "$headline $aod".trim().take(40)
             tickerPic = capsulePic
             filterWhenNoPermission = false
             showSmallIcon = false
@@ -177,7 +178,7 @@ class HyperOsFocusPublisher(
             if (percent != null) {
                 multiProgressInfo {
                     progress = percent
-                    color = PROGRESS_COLOR
+                    color = progressColor
                 }
             }
 
@@ -195,18 +196,17 @@ class HyperOsFocusPublisher(
                             pic = appPic
                         }
                         textInfo {
-                            // 左栏=场景与进度：任务名 + "2/5"；百分比只在进度环与 AOD
-                            this.title = (if (isProgress) headline else appLabel).take(16)
-                            content = (session.progressLabel
-                                ?: session.capsuleText.ifBlank { headline }).take(8)
+                            // 左栏=场景与进度
+                            this.title = (if (isProgress) island.leftTitle else appLabel).take(16)
+                            content = (if (isProgress) island.leftContent else session.progressLabel)
+                                .orEmpty()
+                                .take(8)
                             showHighlightColor = true
                         }
                     }
                     textInfo = TextInfo().apply {
                         title =
-                            (if (isProgress) stripProgressPrefix(session, body) else headline).take(
-                                18
-                            )
+                            (if (isProgress) session.statusLine() else headline).take(18)
                         content = body.take(32)
                         showHighlightColor = true
                         narrowFont = true
@@ -226,7 +226,7 @@ class HyperOsFocusPublisher(
                             }
                             progressInfo {
                                 progress = percent
-                                colorReach = PROGRESS_COLOR
+                                colorReach = progressColor
                                 colorUnReach = PROGRESS_UNREACH
                                 isCCW = true
                             }
@@ -243,11 +243,30 @@ class HyperOsFocusPublisher(
         return Icon.createWithBitmap(bitmap)
     }
 
-    /** n/m 已在左栏，右栏标题剥掉 "n/m · " 前缀避免重复 */
-    private fun stripProgressPrefix(session: LiveSession, body: String): String {
-        val label = session.progressLabel ?: return body
-        return body.removePrefix("$label · ")
+    private data class IslandTexts(
+        val leftTitle: String,
+        val leftContent: String,
+        val aod: String,
+    )
+
+    // 岛左栏两行 + AOD，与原生单行胶囊结构不同，按显示内容各自组合
+    private fun islandTexts(session: LiveSession, percent: Int?): IslandTexts {
+        val taskName = session.title.take(16)
+        val progressText = session.progressLabel.orEmpty().take(8)
+        val percentText = percent?.let { "$it%" } ?: "…"
+        val logText = session.statusLine().take(8)
+        return when (style.chipContent) {
+            LiveUpdateChipContent.BOTH -> IslandTexts(taskName, progressText, percentText)
+            LiveUpdateChipContent.PROGRESS -> IslandTexts(progressText, "", percentText)
+            LiveUpdateChipContent.TASK -> IslandTexts(taskName, "", taskName)
+            LiveUpdateChipContent.LOG -> IslandTexts(taskName, logText, logText)
+            LiveUpdateChipContent.NONE -> IslandTexts("", "", "")
+        }
     }
+
+    // DEFAULT 返回 null，岛沿用应用图标
+    private fun trackerIcon(): Icon? =
+        trackerIcons.bitmapOrNull()?.let { Icon.createWithBitmap(it) }
 
     private companion object {
         const val PIC_PROGRESS_APP = "miui.focus.pic_progress_app"

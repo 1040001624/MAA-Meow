@@ -27,6 +27,7 @@ import com.aliothmoon.maameow.domain.models.CoreDataLocation
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.models.UnlockGesture
+import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
@@ -41,6 +42,8 @@ import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.toLocaleList
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,8 +51,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.InputStream
 import java.io.OutputStream
@@ -77,6 +82,7 @@ class SettingsViewModel(
     private val switchCoreDataLocation: SwitchCoreDataLocationUseCase,
     private val compositionService: MaaCompositionService,
     private val yituliuApiService: YituliuApiService,
+    private val livePublisher: LiveUpdatePublisher,
 ) : ViewModel() {
 
     // ========== 导入导出 ==========
@@ -166,6 +172,19 @@ class SettingsViewModel(
             appSettingsManager.setAutoDownloadUpdate(enabled)
         }
     }
+
+    /**
+     * 样式页入口：实际生效的展示方式有可配置项才显示
+     * capability 含跨进程查询放 IO；重新订阅时会重算，覆盖在系统设置里改权限的情况
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveUpdateEntryVisible: StateFlow<Boolean> = appSettingsManager.liveBackendPreference
+        .mapLatest {
+            withContext(Dispatchers.IO) {
+                runCatching { livePublisher.capability.styleConfigurable }.getOrDefault(false)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val startupBackend: StateFlow<RemoteBackend> = appSettingsManager.startupBackend
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RemoteBackend.SHIZUKU)

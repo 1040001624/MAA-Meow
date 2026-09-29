@@ -1,7 +1,11 @@
 package com.aliothmoon.maameow.data.preferences
 
 import android.content.Context
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.datastore.core.DataStore
+import com.aliothmoon.maameow.data.notification.live.LiveUpdateStyle
+import com.aliothmoon.maameow.domain.notification.LiveBackend
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
@@ -379,7 +383,7 @@ class AppSettingsManager internal constructor(
     }
 
     // 内部通知级别
-    enum class EventNotificationLevel(@param:androidx.annotation.StringRes val labelRes: Int) {
+    enum class EventNotificationLevel(@param:StringRes val labelRes: Int) {
         OFF(R.string.notification_level_off),
         DEFAULT(R.string.notification_level_default),
         HIGH(R.string.notification_level_high),
@@ -396,12 +400,105 @@ class AppSettingsManager internal constructor(
         }
     }
 
-    // 超级岛断网旁路
-    val liveIslandXmsfBypass: StateFlow<Boolean> = setting { it.liveIslandXmsfBypass.toBooleanStrictOrNull() ?: true }
 
-    suspend fun setLiveIslandXmsfBypass(enabled: Boolean) {
+    // Live Updates 通知自定义
+    enum class LiveUpdateChipContent(@param:StringRes val labelRes: Int) {
+        BOTH(R.string.live_update_chip_both),
+        PROGRESS(R.string.live_update_chip_progress),
+        TASK(R.string.live_update_chip_task),
+        LOG(R.string.live_update_chip_log),
+        NONE(R.string.live_update_chip_none),
+    }
+
+    // argb 为 null 的由 LiveUpdateStyle 另行解析
+    enum class LiveUpdateColorScheme(@param:StringRes val labelRes: Int, val argb: Int?) {
+        DEFAULT(R.string.live_update_color_default, null),
+        BLUE(R.string.live_update_color_blue, LiveUpdateStyle.COLOR_ACTIVE),
+        GREEN(R.string.live_update_color_green, LiveUpdateStyle.COLOR_COMPLETED),
+        ORANGE(R.string.live_update_color_orange, 0xFFFF9800.toInt()),
+        PURPLE(R.string.live_update_color_purple, 0xFF9C27B0.toInt()),
+        PINK(R.string.live_update_color_pink, 0xFFE91E63.toInt()),
+        TEAL(R.string.live_update_color_teal, 0xFF009688.toInt()),
+        CUSTOM(R.string.live_update_color_custom, null),
+    }
+
+    enum class LiveUpdateTrackerIcon(
+        @param:StringRes val labelRes: Int,
+        @param:DrawableRes val iconRes: Int?,
+    ) {
+        DEFAULT(R.string.live_update_icon_default, R.drawable.ic_progress_tracker),
+        LOGO(R.string.live_update_icon_logo, R.drawable.ic_maa_logo),
+        DOT(R.string.live_update_icon_dot, R.drawable.ic_tracker_dot),
+        CUSTOM(R.string.live_update_icon_custom, null),
+    }
+
+    // 实况展示方式；null 为自动，取可用的最高一档
+    val liveBackendPreference: StateFlow<LiveBackend?> = setting {
+        it.liveBackend.takeIf(String::isNotEmpty)
+            ?.let { name -> runCatching { LiveBackend.valueOf(name) }.getOrNull() }
+    }
+
+    suspend fun setLiveBackendPreference(backend: LiveBackend?) {
         with(AppSettingsSchema) {
-            context.dataStore.edit { it[liveIslandXmsfBypass] = enabled.toString() }
+            context.dataStore.edit { it[liveBackend] = backend?.name.orEmpty() }
+        }
+    }
+
+    // 旧版超级岛兼容模式，只读
+    val liveIslandXmsfBypass: StateFlow<Boolean> =
+        setting { it.liveIslandXmsfBypass.toBooleanStrictOrNull() ?: true }
+
+    // 实况通知短文本内容
+    val liveUpdateChipContent: StateFlow<LiveUpdateChipContent> = setting {
+        runCatching { LiveUpdateChipContent.valueOf(it.liveUpdateChipContent) }
+            .getOrDefault(LiveUpdateChipContent.BOTH)
+    }
+
+    suspend fun setLiveUpdateChipContent(content: LiveUpdateChipContent) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateChipContent] = content.name }
+        }
+    }
+
+    // 实况通知进度条配色
+    val liveUpdateColorScheme: StateFlow<LiveUpdateColorScheme> = setting {
+        runCatching { LiveUpdateColorScheme.valueOf(it.liveUpdateColorScheme) }
+            .getOrDefault(LiveUpdateColorScheme.DEFAULT)
+    }
+
+    suspend fun setLiveUpdateColorScheme(scheme: LiveUpdateColorScheme) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateColorScheme] = scheme.name }
+        }
+    }
+
+    // 自定义主色 HEX，仅 CUSTOM 配色生效
+    val liveUpdateCustomColor: StateFlow<String> = setting { it.liveUpdateCustomColor }
+
+    suspend fun setLiveUpdateCustomColor(color: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateCustomColor] = color }
+        }
+    }
+
+    // 实况通知图标
+    val liveUpdateTrackerIcon: StateFlow<LiveUpdateTrackerIcon> = setting {
+        runCatching { LiveUpdateTrackerIcon.valueOf(it.liveUpdateTrackerIcon) }
+            .getOrDefault(LiveUpdateTrackerIcon.DEFAULT)
+    }
+
+    suspend fun setLiveUpdateTrackerIcon(icon: LiveUpdateTrackerIcon) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateTrackerIcon] = icon.name }
+        }
+    }
+
+    // 自定义图标文件路径，仅 CUSTOM 图标生效
+    val liveUpdateCustomTrackerPath: StateFlow<String> = setting { it.liveUpdateCustomTrackerPath }
+
+    suspend fun setLiveUpdateCustomTrackerPath(path: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[liveUpdateCustomTrackerPath] = path }
         }
     }
 

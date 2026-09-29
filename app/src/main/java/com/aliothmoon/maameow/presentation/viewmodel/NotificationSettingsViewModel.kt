@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.notification.NotificationSettings
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.notification.LiveBackend
 import com.aliothmoon.maameow.domain.notification.LiveCapability
 import com.aliothmoon.maameow.domain.notification.LiveSessionCoordinator
 import com.aliothmoon.maameow.domain.notification.LiveUpdatePublisher
@@ -65,12 +66,12 @@ class NotificationSettingsViewModel(
     private val _liveCapability = MutableStateFlow(livePublisher.capability)
     val liveCapability: StateFlow<LiveCapability> = _liveCapability.asStateFlow()
 
-    val liveIslandXmsfBypass: StateFlow<Boolean> = appSettingsManager.liveIslandXmsfBypass
+    val liveBackendPreference: StateFlow<LiveBackend?> = appSettingsManager.liveBackendPreference
 
     init {
-        // 旁路开关会改变后端选择，展示方式得跟着落盘值走，不能等下次 onResume
+        // 展示方式得跟着落盘值走，不能等下次 onResume
         viewModelScope.launch {
-            appSettingsManager.liveIslandXmsfBypass.drop(1).collect {
+            appSettingsManager.liveBackendPreference.drop(1).collect {
                 _liveCapability.value = livePublisher.capability
             }
         }
@@ -81,8 +82,8 @@ class NotificationSettingsViewModel(
         _liveCapability.value = livePublisher.refreshCapability()
     }
 
-    fun setLiveIslandXmsfBypass(enabled: Boolean) {
-        viewModelScope.launch { appSettingsManager.setLiveIslandXmsfBypass(enabled) }
+    fun setLiveBackendPreference(backend: LiveBackend) {
+        viewModelScope.launch { appSettingsManager.setLiveBackendPreference(backend) }
     }
 
     fun requestPostNotifications(context: Context) {

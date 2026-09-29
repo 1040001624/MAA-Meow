@@ -81,8 +81,33 @@ data class AppSettings(
     @PrefKey(default = "DEFAULT")
     val eventNotificationLevel: String = "DEFAULT",
 
+    /** 旧版「超级岛兼容模式」，只读：关过的老用户自动档跳过超级岛 */
     @PrefKey(default = "true")
     val liveIslandXmsfBypass: String = "true",
+
+    /** 实况展示方式：空为自动，否则为 LiveBackend 名 */
+    @PrefKey(default = "")
+    val liveBackend: String = "",
+
+    /** 实况短文本内容，取值见 LiveUpdateChipContent */
+    @PrefKey(default = "BOTH")
+    val liveUpdateChipContent: String = "BOTH",
+
+    /** 实况进度条配色，取值见 LiveUpdateColorScheme */
+    @PrefKey(default = "DEFAULT")
+    val liveUpdateColorScheme: String = "DEFAULT",
+
+    /** 自定义主色 HEX，仅 CUSTOM 配色生效 */
+    @PrefKey(default = "")
+    val liveUpdateCustomColor: String = "",
+
+    /** 实况图标，取值见 LiveUpdateTrackerIcon */
+    @PrefKey(default = "DEFAULT")
+    val liveUpdateTrackerIcon: String = "DEFAULT",
+
+    /** 自定义图标文件路径，仅 CUSTOM 图标生效 */
+    @PrefKey(default = "")
+    val liveUpdateCustomTrackerPath: String = "",
 
     @PrefKey(default = "P720")
     val backgroundResolution: String = "P720",
