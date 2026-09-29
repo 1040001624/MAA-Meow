@@ -1,14 +1,12 @@
 package com.aliothmoon.maameow.third.wrappers;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.hardware.display.VirtualDisplay;
 import android.os.Handler;
 import android.view.Display;
 import android.view.Surface;
 
-import com.aliothmoon.maameow.constant.AndroidVersions;
 import com.aliothmoon.maameow.third.Command;
 import com.aliothmoon.maameow.third.DisplayInfo;
 import com.aliothmoon.maameow.third.FakeContext;
@@ -30,7 +28,6 @@ public final class DisplayManager {
     private final Object manager; // instance of hidden class android.hardware.display.DisplayManagerGlobal
     private Method getDisplayInfoMethod;
     private Method createVirtualDisplayMethod;
-    private Method requestDisplayPowerMethod;
     private DisplayManager(Object manager) {
         this.manager = manager;
     }
@@ -154,24 +151,6 @@ public final class DisplayManager {
         ctor.setAccessible(true);
         android.hardware.display.DisplayManager dm = ctor.newInstance(FakeContext.get());
         return dm.createVirtualDisplay(name, width, height, dpi, surface, flags);
-    }
-
-    private Method getRequestDisplayPowerMethod() throws NoSuchMethodException {
-        if (requestDisplayPowerMethod == null) {
-            requestDisplayPowerMethod = manager.getClass().getMethod("requestDisplayPower", int.class, boolean.class);
-        }
-        return requestDisplayPowerMethod;
-    }
-
-    @TargetApi(AndroidVersions.API_35_ANDROID_15)
-    public boolean requestDisplayPower(int displayId, boolean on) {
-        try {
-            Method method = getRequestDisplayPowerMethod();
-            return (boolean) method.invoke(manager, displayId, on);
-        } catch (ReflectiveOperationException e) {
-            Ln.e("Could not invoke method", e);
-            return false;
-        }
     }
 
     public DisplayListenerHandle registerDisplayListener(DisplayListener listener, Handler handler) {

@@ -7,33 +7,21 @@ import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.wrappers.DisplayControl
 import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import com.aliothmoon.maameow.third.wrappers.SurfaceControl
-import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 object PowerController {
     private const val TAG = "PowerController"
     private const val USER_ACTIVITY_INTERVAL_MS = 4_000L
-    private val file = File("/data/local/tmp/maa_power_off_flag")
+
+    // 不落盘：进程被杀后由用户唤醒时系统恢复面板
+    private val poweredOff = AtomicBoolean(false)
 
     private val keepAliveDisplayId = AtomicInteger(DefaultDisplayConfig.DISPLAY_NONE)
     private val keepAliveRunning = AtomicBoolean(false)
 
-    var flag: Boolean
-        get() = runCatching { file.exists() }.getOrDefault(false)
-        set(value) {
-            runCatching {
-                if (value) {
-                    file.parentFile?.mkdirs()
-                    file.createNewFile()
-                } else {
-                    file.delete()
-                }
-            }
-        }
-
     fun setDisplayPower(on: Boolean): Boolean {
-        flag = !on
+        poweredOff.set(!on)
         return setDisplayPowerInternal(on)
     }
 
@@ -114,7 +102,7 @@ object PowerController {
 
     fun destroy() {
         stopUserActivityKeepAlive()
-        if (flag) {
+        if (poweredOff.get()) {
             Ln.i("$TAG: Emergency recovering screen power...")
             runCatching {
                 setDisplayPower(true)
