@@ -46,6 +46,7 @@ class NotificationSettingsViewModel(
             "SMTP",
             "Bark",
             "Qmsg",
+            "QmsgV3",
             "Gotify",
             "CustomWebhook",
         )

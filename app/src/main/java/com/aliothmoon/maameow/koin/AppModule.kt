@@ -39,6 +39,7 @@ import com.aliothmoon.maameow.data.notification.provider.GotifyProvider
 import com.aliothmoon.maameow.data.notification.provider.KookProvider
 import com.aliothmoon.maameow.data.notification.provider.NotificationProvider
 import com.aliothmoon.maameow.data.notification.provider.QmsgProvider
+import com.aliothmoon.maameow.data.notification.provider.QmsgV3Provider
 import com.aliothmoon.maameow.data.notification.provider.ServerChanProvider
 import com.aliothmoon.maameow.data.notification.provider.SmtpProvider
 import com.aliothmoon.maameow.data.notification.provider.TelegramProvider
@@ -260,6 +261,7 @@ val appModule = module {
     single { SmtpProvider(get()) } bind NotificationProvider::class
     single { BarkProvider(get(), get()) } bind NotificationProvider::class
     single { QmsgProvider(get(), get()) } bind NotificationProvider::class
+    single { QmsgV3Provider(get(), get()) } bind NotificationProvider::class
     single { GotifyProvider(get(), get()) } bind NotificationProvider::class
     single { CustomWebhookProvider(get(), get()) } bind NotificationProvider::class
     single { ExternalNotificationService(get(), get(), getAll()) }

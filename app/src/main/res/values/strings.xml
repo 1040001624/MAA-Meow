@@ -1620,7 +1620,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_provider_discord_webhook">Discord Webhook</string>
     <string name="notification_provider_smtp">SMTP</string>
     <string name="notification_provider_bark">Bark</string>
-    <string name="notification_provider_qmsg">Qmsg</string>
+    <string name="notification_provider_qmsg">Qmsg（旧版接口）</string>
+    <string name="notification_provider_qmsg_v3">Qmsg 3.0</string>
     <string name="notification_provider_gotify">Gotify</string>
     <string name="notification_provider_custom_webhook">自定义 Webhook</string>
     <string name="notification_label_send_key">Send Key</string>
@@ -1652,6 +1653,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_label_qmsg_key">Qmsg Key</string>
     <string name="notification_label_user_qq">User QQ</string>
     <string name="notification_label_bot_qq">Bot QQ</string>
+    <string name="notification_label_qmsg_group">QQ 群号</string>
+    <string name="notification_placeholder_qmsg_group">可选，留空推送到单聊</string>
     <string name="notification_label_server">服务器地址</string>
     <string name="notification_label_application_token">应用 Token</string>
     <string name="notification_label_request_body_template">请求体模板</string>

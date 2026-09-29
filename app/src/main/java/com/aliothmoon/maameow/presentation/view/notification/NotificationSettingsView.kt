@@ -60,6 +60,7 @@ private val PROVIDERS: List<Pair<String, Int>> = listOf(
     "SMTP" to R.string.notification_provider_smtp,
     "Bark" to R.string.notification_provider_bark,
     "Qmsg" to R.string.notification_provider_qmsg,
+    "QmsgV3" to R.string.notification_provider_qmsg_v3,
     "Gotify" to R.string.notification_provider_gotify,
     "CustomWebhook" to R.string.notification_provider_custom_webhook,
 )
@@ -545,6 +546,21 @@ private fun ProviderConfig(
                 onValueChange = { viewModel.updateSettings { copy(qmsgBot = it) } },
                 label = stringResource(R.string.notification_label_bot_qq),
                 placeholder = stringResource(R.string.notification_placeholder_optional)
+            )
+        }
+
+        "QmsgV3" -> {
+            ITextField(
+                value = settings.qmsgV3Key,
+                onValueChange = { viewModel.updateSettings { copy(qmsgV3Key = it) } },
+                label = stringResource(R.string.notification_label_qmsg_key)
+            )
+            Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
+            ITextField(
+                value = settings.qmsgV3Group,
+                onValueChange = { viewModel.updateSettings { copy(qmsgV3Group = it) } },
+                label = stringResource(R.string.notification_label_qmsg_group),
+                placeholder = stringResource(R.string.notification_placeholder_qmsg_group)
             )
         }
 

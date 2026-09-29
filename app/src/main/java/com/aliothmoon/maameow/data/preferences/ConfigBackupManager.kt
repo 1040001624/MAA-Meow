@@ -144,6 +144,7 @@ internal fun NotificationSettings.sanitizedForExport() = copy(
     dingTalkSecret = "",
     kookBotToken = "",
     qmsgKey = "",
+    qmsgV3Key = "",
     gotifyToken = "",
     customWebhookUrl = "",
     customWebhookHeaders = "",
