@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.domain.models.NotificationImage
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
@@ -229,7 +230,7 @@ class TaskChainHandler(
      * AllTasksCompleted (3): 所有任务完成
      * 附带任务总耗时和理智恢复时间信息
      */
-    fun onAllTasksCompleted(asStopped: Boolean = false) {
+    fun onAllTasksCompleted(asStopped: Boolean = false, screenshot: NotificationImage? = null) {
         // 名单挂在 statusTracker 上，clearSessionScopedState 会清掉，先取快照
         val failedTaskNames = failedTaskNames()
         clearSessionScopedState()
@@ -309,7 +310,8 @@ class TaskChainHandler(
         if (!asStopped) {
             // 出错时保留完成上下文（用时/理智）再附清单，避免通知正文只剩清单
             notificationCenter.notifyAllTasksCompleted(
-                errorSummary?.let { "$message\n$it" } ?: message
+                errorSummary?.let { "$message\n$it" } ?: message,
+                screenshot,
             )
         }
 

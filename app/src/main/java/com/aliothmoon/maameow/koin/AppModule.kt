@@ -72,6 +72,7 @@ import com.aliothmoon.maameow.domain.service.CopilotManager
 import com.aliothmoon.maameow.domain.service.CoreDataPusher
 import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.domain.service.FightDropsRefresher
+import com.aliothmoon.maameow.domain.service.FrameSnapshotter
 import com.aliothmoon.maameow.domain.service.GameDataReporter
 import com.aliothmoon.maameow.domain.service.GameFpsReader
 import com.aliothmoon.maameow.domain.service.GameFpsWatcher
@@ -84,6 +85,7 @@ import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.OperBoxYituliuSync
 import com.aliothmoon.maameow.domain.service.RemoteAppAliveChecker
+import com.aliothmoon.maameow.domain.service.RemoteFrameSnapshotter
 import com.aliothmoon.maameow.domain.service.RemoteGameFpsReader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
@@ -301,6 +303,7 @@ val appModule = module {
     singleOf(::MaaCompositionService)
     single<MaaExecutionStateHolder> { get<MaaCompositionService>() }
     single { GameMuteCoordinator(get(), RemoteGameAudioAdapter) }
+    single<FrameSnapshotter> { RemoteFrameSnapshotter() }
     singleOf(::MaaCallbackDispatcher)
 
     // 定时唤醒 + 解锁

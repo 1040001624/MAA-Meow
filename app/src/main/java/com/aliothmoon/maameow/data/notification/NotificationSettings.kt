@@ -11,6 +11,7 @@ data class NotificationSettings(
     @PrefKey(default = "true") val sendOnError: String = "true",
     @PrefKey(default = "false") val sendOnServiceDied: String = "false",
     @PrefKey(default = "false") val includeLogDetails: String = "false",
+    @PrefKey(default = "false") val attachScreenshot: String = "false",
     @PrefKey(default = "") val enabledProviders: String = "",
     @PrefKey(default = "") val serverChanSendKey: String = "",
     @PrefKey(default = "") val discordBotToken: String = "",

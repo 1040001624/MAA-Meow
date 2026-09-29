@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.data.model.LogLevel
+import com.aliothmoon.maameow.domain.models.NotificationImage
 import com.aliothmoon.maameow.domain.service.CoreReportRequest
 import com.aliothmoon.maameow.domain.service.GameDataReporter
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
@@ -90,12 +91,15 @@ class MaaCallbackDispatcher(
 
     private fun handleAllTasksCompleted() {
         val stopping = stateHolder.currentRunState() == MaaExecutionState.STOPPING
+        var screenshot: NotificationImage? = null
         if (!stopping) {
+            // 必须赶在 IDLE 之前：IDLE 一到 TaskEndRegistry 就会关游戏、息屏
+            screenshot = notificationCenter.captureCompletionScreenshot()
             stateHolder.reportRunState(MaaExecutionState.IDLE)
         }
         // 不依赖 details：全部完成的收尾（清运行时登记、写总结、发通知）
         // 不该因为这一条回调的 JSON 解析失败而被整个跳过
-        taskChainHandler.onAllTasksCompleted(asStopped = stopping)
+        taskChainHandler.onAllTasksCompleted(asStopped = stopping, screenshot = screenshot)
         sessionLogger.endSession(if (stopping) "STOPPED" else "COMPLETED")
     }
 

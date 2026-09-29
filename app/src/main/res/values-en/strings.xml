@@ -1554,6 +1554,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="notification_send_on_error">Send notification when task fails</string>
     <string name="notification_send_on_service_died">Send notification when service dies</string>
     <string name="notification_include_log_details">Include log details</string>
+    <string name="notification_attach_screenshot">Attach screenshot to completion notice</string>
+    <string name="notification_attach_screenshot_desc">Captures the game screen when tasks finish. Only Telegram, Discord, SMTP and KOOK support images</string>
     <string name="notification_section_channels">Channels</string>
     <string name="notification_section_test">Test</string>
     <string name="notification_provider_server_chan">Server Chan</string>

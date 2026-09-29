@@ -65,6 +65,14 @@ class NotificationSettingsManager(private val context: Context) {
             initialSettings.includeLogDetails.toBooleanStrictOrNull() ?: false
         )
 
+    val attachScreenshot: StateFlow<Boolean> = settings
+        .map { it.attachScreenshot.toBooleanStrictOrNull() ?: false }
+        .distinctUntilChanged()
+        .stateIn(
+            scope, SharingStarted.Eagerly,
+            initialSettings.attachScreenshot.toBooleanStrictOrNull() ?: false
+        )
+
     val enabledProviderIds: StateFlow<List<String>> = settings
         .map { it.enabledProviders.split(",").filter { id -> id.isNotEmpty() } }
         .distinctUntilChanged()

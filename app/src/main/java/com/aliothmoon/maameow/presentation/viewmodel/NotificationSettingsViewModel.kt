@@ -63,6 +63,9 @@ class NotificationSettingsViewModel(
     val sendOnError: StateFlow<Boolean> = settingsManager.sendOnError
     val sendOnServiceDied: StateFlow<Boolean> = settingsManager.sendOnServiceDied
     val includeLogDetails: StateFlow<Boolean> = settingsManager.includeLogDetails
+    val attachScreenshot: StateFlow<Boolean> = settingsManager.attachScreenshot
+
+    val imageChannelEnabled: StateFlow<Boolean> = notificationService.imageChannelEnabled
 
     private val _liveCapability = MutableStateFlow(livePublisher.capability)
     val liveCapability: StateFlow<LiveCapability> = _liveCapability.asStateFlow()

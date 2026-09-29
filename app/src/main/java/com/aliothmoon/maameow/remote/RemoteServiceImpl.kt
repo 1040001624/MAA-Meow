@@ -31,6 +31,7 @@ import com.aliothmoon.maameow.remote.internal.XmsfFirewall
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.Workarounds
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -45,6 +46,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
     companion object {
         private const val TAG = "RemoteService"
         private const val HEARTBEAT_INTERVAL_MS = 5_000L
+        private const val JPEG_MAX_EDGE = 1280
 
         @JvmStatic
         fun performEmergencyCleanup() {
@@ -191,16 +193,50 @@ class RemoteServiceImpl : RemoteService.Stub() {
     override fun screencap(width: Int, height: Int) {
     }
 
+    /** 取当前帧交给 [block]，用完即回收；无帧或出错返回 null */
+    private inline fun <T> withFrameBitmap(tag: String, block: (Bitmap) -> T?): T? {
+        val bitmap = NativeBridgeLib.getFrameBufferBitmap() ?: run {
+            Ln.w("$TAG: $tag - no frame available")
+            return null
+        }
+        return try {
+            block(bitmap)
+        } catch (e: Exception) {
+            Ln.e("$TAG: $tag error: ${e.message}")
+            null
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    override fun captureFrameJpeg(quality: Int): ByteArray? = withFrameBitmap("captureFrameJpeg") { frame ->
+        // 前台模式是原生分辨率，缩到长边 1280 免得撑爆 binder 缓冲
+        val scale = JPEG_MAX_EDGE.toFloat() / maxOf(frame.width, frame.height)
+        val bitmap = if (scale < 1f) {
+            Bitmap.createScaledBitmap(frame, (frame.width * scale).toInt(), (frame.height * scale).toInt(), true)
+        } else {
+            frame
+        }
+        try {
+            ByteArrayOutputStream().use { out ->
+                if (bitmap.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(1, 100), out)) {
+                    out.toByteArray()
+                } else {
+                    Ln.e("$TAG: captureFrameJpeg - JPEG compress failed")
+                    null
+                }
+            }
+        } finally {
+            if (bitmap !== frame) bitmap.recycle()
+        }
+    }
+
     override fun captureFramePng(dirPath: String?): String? {
         if (dirPath.isNullOrBlank()) {
             Ln.w("$TAG: captureFramePng - blank dirPath")
             return null
         }
-        val bitmap = NativeBridgeLib.getFrameBufferBitmap() ?: run {
-            Ln.w("$TAG: captureFramePng - no frame available")
-            return null
-        }
-        return try {
+        return withFrameBitmap("captureFramePng") { bitmap ->
             val dir = File(dirPath).apply { mkdirs() }
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
             val file = File(dir, "screenshot_$timestamp.png")
@@ -210,15 +246,10 @@ class RemoteServiceImpl : RemoteService.Stub() {
             if (!ok) {
                 Ln.e("$TAG: captureFramePng - PNG compress failed")
                 file.delete()
-                return null
+                return@withFrameBitmap null
             }
             Ln.i("$TAG: captureFramePng saved ${file.absolutePath}")
             file.absolutePath
-        } catch (e: Exception) {
-            Ln.e("$TAG: captureFramePng error: ${e.message}")
-            null
-        } finally {
-            bitmap.recycle()
         }
     }
 

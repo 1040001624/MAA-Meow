@@ -1610,6 +1610,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_send_on_error">任务出错时通知</string>
     <string name="notification_send_on_service_died">服务异常终止时通知</string>
     <string name="notification_include_log_details">附带日志详情</string>
+    <string name="notification_attach_screenshot">完成通知附带截图</string>
+    <string name="notification_attach_screenshot_desc">截取任务结束时的游戏画面，仅 Telegram、Discord、SMTP、KOOK 支持</string>
     <string name="notification_section_channels">通知渠道</string>
     <string name="notification_section_test">测试</string>
     <string name="notification_provider_server_chan">Server酱</string>

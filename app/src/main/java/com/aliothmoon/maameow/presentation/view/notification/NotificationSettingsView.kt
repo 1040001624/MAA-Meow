@@ -81,6 +81,8 @@ fun NotificationSettingsView(
     val sendOnError by viewModel.sendOnError.collectAsStateWithLifecycle()
     val sendOnServiceDied by viewModel.sendOnServiceDied.collectAsStateWithLifecycle()
     val includeLogDetails by viewModel.includeLogDetails.collectAsStateWithLifecycle()
+    val attachScreenshot by viewModel.attachScreenshot.collectAsStateWithLifecycle()
+    val imageChannelEnabled by viewModel.imageChannelEnabled.collectAsStateWithLifecycle()
     val liveCapability by viewModel.liveCapability.collectAsStateWithLifecycle()
     val liveBackendPreference by viewModel.liveBackendPreference.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -291,6 +293,16 @@ fun NotificationSettingsView(
                         contentColor
                     ) {
                         viewModel.updateSettings { copy(includeLogDetails = it.toString()) }
+                    }
+                    ListItemDivider()
+                    SwitchItem(
+                        stringResource(R.string.notification_attach_screenshot),
+                        attachScreenshot,
+                        contentColor,
+                        description = stringResource(R.string.notification_attach_screenshot_desc),
+                        enabled = imageChannelEnabled,
+                    ) {
+                        viewModel.updateSettings { copy(attachScreenshot = it.toString()) }
                     }
                 }
             }
@@ -619,13 +631,20 @@ private fun ProviderConfig(
 
 @Composable
 private fun SwitchItem(
-    title: String, checked: Boolean, contentColor: Color, onCheckedChange: (Boolean) -> Unit
+    title: String,
+    checked: Boolean,
+    contentColor: Color,
+    description: String? = null,
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     SettingRow(
         title = title,
+        description = description,
         titleColor = contentColor,
+        enabled = enabled,
         trailing = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
         },
     )
 }

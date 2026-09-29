@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.domain.service
 import android.content.Context
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.domain.models.NotificationImage
 import com.aliothmoon.maameow.domain.notification.LiveCategory
 import com.aliothmoon.maameow.domain.notification.LiveNotifyIds
 import com.aliothmoon.maameow.domain.notification.LiveSession
@@ -16,14 +17,23 @@ class MaaNotificationCenter(
     private val externalService: ExternalNotificationService,
     private val settings: NotificationSettingsManager,
     private val liveCoordinator: LiveSessionCoordinator,
+    private val frameSnapshotter: FrameSnapshotter,
 ) {
     private val appContext = context.applicationContext
 
-    fun notifyAllTasksCompleted(summary: String) {
+    /** 同步跨进程截图，没开或没有能发图的渠道时不截 */
+    fun captureCompletionScreenshot(): NotificationImage? {
+        val wanted = settings.sendOnComplete.value &&
+                settings.attachScreenshot.value &&
+                externalService.imageChannelEnabled.value
+        return if (wanted) frameSnapshotter.captureJpeg()?.let(::NotificationImage) else null
+    }
+
+    fun notifyAllTasksCompleted(summary: String, screenshot: NotificationImage? = null) {
         val title = appContext.getString(R.string.notification_event_all_tasks_completed)
         publishResult(title, summary, timeoutSec = 120)
         if (settings.sendOnComplete.value) {
-            externalService.sendWithLogs("所有任务已完成", summary)
+            externalService.sendWithLogs("所有任务已完成", summary, screenshot)
         }
     }
 
