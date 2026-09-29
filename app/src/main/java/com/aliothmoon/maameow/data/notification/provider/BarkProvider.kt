@@ -34,7 +34,7 @@ class BarkProvider(
         val body = JsonUtils.common.encodeToString(
             BarkRequest(
                 title = title,
-                body = content,
+                body = content.keepTailUtf8(MAX_BODY_BYTES),
                 deviceKey = sendKey,
             )
         )
@@ -72,4 +72,12 @@ class BarkProvider(
     private data class BarkResponse(
         val code: Int = -1,
     )
+
+    private companion object {
+        /**
+         * APNs 整个推送载荷上限 4096 字节，超出时 bark-server 返回 500 PayloadTooLarge
+         * 标题、分组、图标与转义同在载荷里，正文只给 3000
+         */
+        const val MAX_BODY_BYTES = 3000
+    }
 }

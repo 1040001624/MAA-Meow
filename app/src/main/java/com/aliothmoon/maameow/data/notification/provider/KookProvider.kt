@@ -16,6 +16,9 @@ private const val DIRECT_URL = "https://www.kookapp.cn/api/v3/direct-message/cre
 /** KOOK 消息类型 9 = KMarkdown */
 private const val KMARKDOWN = 9
 
+/** 文档建议消息内容不超过 8000 字符 */
+private const val MAX_CONTENT_LENGTH = 8000
+
 /**
  * KOOK 机器人推送，对齐上游 WebhookPresetTemplate 的 KOOK Channel / KOOK Direct 两条预置模板
  * 频道和私聊只差一个接口地址与 target_id 的含义
@@ -39,11 +42,12 @@ class KookProvider(
             )
         val direct = settings.kookDirectMessage.toBooleanStrictOrNull() == true
 
+        val header = "**$title**\n"
         val body = JsonUtils.common.encodeToString(
             KookRequest(
                 type = KMARKDOWN,
                 targetId = targetId,
-                content = "**$title**\n$content",
+                content = header + content.keepTail(MAX_CONTENT_LENGTH - header.length),
             )
         )
 

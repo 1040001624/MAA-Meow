@@ -42,7 +42,7 @@ class DiscordProvider(
         return runCatching {
             httpClient.postForm(
                 url = "https://discord.com/api/v9/channels/$channelId/messages",
-                params = mapOf("content" to content),
+                params = mapOf("content" to content.keepTail(MAX_CONTENT_LENGTH)),
                 headers = discordHeaders(botToken)
             ).use { response ->
                 if (response.isSuccessful) {
@@ -107,4 +107,9 @@ class DiscordProvider(
     private data class DiscordCreateChannelResponse(
         val id: String? = null,
     )
+
+    private companion object {
+        /** 消息 content 上限，超出时接口返回 400 */
+        const val MAX_CONTENT_LENGTH = 2000
+    }
 }

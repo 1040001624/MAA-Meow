@@ -1713,6 +1713,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_err_telegram_token_empty">Telegram Bot Token 未填写</string>
     <string name="notification_err_telegram_chat_empty">Telegram Chat ID 未填写</string>
     <string name="notification_err_http_status">服务端返回状态码 %1$d</string>
+    <string name="notification_err_rejected">服务端拒绝：%1$s</string>
     <string name="notification_err_network">网络请求失败</string>
 
     <!-- i18n: accessibility -->

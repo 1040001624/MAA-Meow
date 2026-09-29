@@ -22,7 +22,7 @@ class DiscordWebhookProvider(
             ?: return NotificationSendResult.Failed(
                 uiTextOf(R.string.notification_err_discord_webhook_empty)
             )
-        val body = JsonUtils.common.encodeToString(DiscordWebhookRequest(content = content))
+        val body = JsonUtils.common.encodeToString(DiscordWebhookRequest(content = content.keepTail(MAX_CONTENT_LENGTH)))
 
         return runCatching {
             httpClient.post(webhookUrl, body).use { response ->
@@ -64,4 +64,9 @@ class DiscordWebhookProvider(
         val message: String? = null,
         val code: Int? = null,
     )
+
+    private companion object {
+        /** Webhook content 上限，超出时接口返回 400 */
+        const val MAX_CONTENT_LENGTH = 2000
+    }
 }

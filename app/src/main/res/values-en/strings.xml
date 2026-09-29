@@ -1657,6 +1657,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="notification_err_telegram_token_empty">Telegram Bot Token is not set</string>
     <string name="notification_err_telegram_chat_empty">Telegram Chat ID is not set</string>
     <string name="notification_err_http_status">Server responded with HTTP %1$d</string>
+    <string name="notification_err_rejected">Rejected by server: %1$s</string>
     <string name="notification_err_network">Network request failed</string>
 
     <!-- i18n: accessibility -->

@@ -47,7 +47,7 @@ class DingTalkProvider(
         val body = JsonUtils.common.encodeToString(
             DingTalkRequest(
                 msgtype = "text",
-                text = DingTalkText("$title: $content"),
+                text = DingTalkText("$title: " + content.keepTailUtf8(MAX_CONTENT_BYTES)),
             )
         )
 
@@ -86,4 +86,9 @@ class DingTalkProvider(
     private data class DingTalkResponse(
         val errcode: Int = -1,
     )
+
+    private companion object {
+        /** 请求体上限 20000 字节，超出时返回 460101 body 大小不合法；留出标题与转义的余量 */
+        const val MAX_CONTENT_BYTES = 18000
+    }
 }
