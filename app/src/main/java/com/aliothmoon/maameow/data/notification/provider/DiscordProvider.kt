@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.data.notification.provider
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.domain.models.NotificationImage
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
@@ -17,7 +18,18 @@ class DiscordProvider(
 
     override val id = "Discord"
 
-    override suspend fun send(title: String, content: String): NotificationSendResult {
+    override val supportsImage = true
+
+    override suspend fun send(title: String, content: String): NotificationSendResult =
+        sendInternal(content, image = null)
+
+    override suspend fun send(
+        title: String,
+        content: String,
+        image: NotificationImage,
+    ): NotificationSendResult = sendWithTextFallback(title, content) { sendInternal(content, image) }
+
+    private suspend fun sendInternal(content: String, image: NotificationImage?): NotificationSendResult {
         val settings = settingsManager.settings.first()
         val botToken = settings.discordBotToken.takeIf { it.isNotBlank() }
             ?: return NotificationSendResult.Failed(
@@ -39,12 +51,14 @@ class DiscordProvider(
                 return NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
 
+        val url = "https://discord.com/api/v9/channels/$channelId/messages"
+        val text = content.keepTail(MAX_CONTENT_LENGTH)
         return runCatching {
-            httpClient.postForm(
-                url = "https://discord.com/api/v9/channels/$channelId/messages",
-                params = mapOf("content" to content.keepTail(MAX_CONTENT_LENGTH)),
-                headers = discordHeaders(botToken)
-            ).use { response ->
+            if (image == null) {
+                httpClient.postForm(url, mapOf("content" to text), discordHeaders(botToken))
+            } else {
+                httpClient.postMultipart(url, discordMultipart(text, image), discordHeaders(botToken))
+            }.use { response ->
                 if (response.isSuccessful) {
                     NotificationSendResult.Success
                 } else {

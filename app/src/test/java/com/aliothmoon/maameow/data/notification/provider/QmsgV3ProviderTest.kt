@@ -3,13 +3,10 @@ package com.aliothmoon.maameow.data.notification.provider
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettings
-import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.utils.i18n.UiText
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -33,11 +30,8 @@ class QmsgV3ProviderTest {
     ): NotificationSendResult {
         coEvery {
             httpClient.post(capture(url), capture(body), any(), any())
-        } returns buildQmsgResponse(response)
-        val manager = mockk<NotificationSettingsManager> {
-            every { this@mockk.settings } returns flowOf(settings)
-        }
-        return runBlocking { QmsgV3Provider(httpClient, manager).send("t", content) }
+        } returns buildResponse(body = response)
+        return runBlocking { QmsgV3Provider(httpClient, settingsManagerOf(settings)).send("t", content) }
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.data.notification.provider
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.domain.models.NotificationImage
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
@@ -16,16 +17,31 @@ class DiscordWebhookProvider(
 
     override val id = "Discord Webhook"
 
-    override suspend fun send(title: String, content: String): NotificationSendResult {
+    override val supportsImage = true
+
+    override suspend fun send(title: String, content: String): NotificationSendResult =
+        sendInternal(content, image = null)
+
+    override suspend fun send(
+        title: String,
+        content: String,
+        image: NotificationImage,
+    ): NotificationSendResult = sendWithTextFallback(title, content) { sendInternal(content, image) }
+
+    private suspend fun sendInternal(content: String, image: NotificationImage?): NotificationSendResult {
         val settings = settingsManager.settings.first()
         val webhookUrl = settings.discordWebhookUrl.takeIf { it.isNotBlank() }
             ?: return NotificationSendResult.Failed(
                 uiTextOf(R.string.notification_err_discord_webhook_empty)
             )
-        val body = JsonUtils.common.encodeToString(DiscordWebhookRequest(content = content.keepTail(MAX_CONTENT_LENGTH)))
+        val text = content.keepTail(MAX_CONTENT_LENGTH)
 
         return runCatching {
-            httpClient.post(webhookUrl, body).use { response ->
+            if (image == null) {
+                httpClient.post(webhookUrl, JsonUtils.common.encodeToString(DiscordWebhookRequest(content = text)))
+            } else {
+                httpClient.postMultipart(webhookUrl, discordMultipart(text, image))
+            }.use { response ->
                 val responseBody = response.body.string()
                 if (response.isSuccessful && responseBody.isEmpty()) {
                     return@use NotificationSendResult.Success

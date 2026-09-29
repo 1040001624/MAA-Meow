@@ -3,21 +3,14 @@ package com.aliothmoon.maameow.data.notification.provider
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettings
-import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.utils.i18n.UiText
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.Protocol
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,11 +34,8 @@ class QmsgProviderTest {
     ): NotificationSendResult {
         coEvery {
             httpClient.post(capture(url), capture(body), any(), any())
-        } returns buildQmsgResponse(response)
-        val manager = mockk<NotificationSettingsManager> {
-            every { this@mockk.settings } returns flowOf(configured)
-        }
-        return runBlocking { QmsgProvider(httpClient, manager).send("t", content) }
+        } returns buildResponse(body = response)
+        return runBlocking { QmsgProvider(httpClient, settingsManagerOf(configured)).send("t", content) }
     }
 
     @Test
@@ -84,12 +74,3 @@ class QmsgProviderTest {
         assertEquals(R.string.notification_err_http_status, text.resId)
     }
 }
-
-internal fun buildQmsgResponse(body: String): Response =
-    Response.Builder()
-        .request(Request.Builder().url("http://localhost").build())
-        .protocol(Protocol.HTTP_1_1)
-        .code(200)
-        .message("test")
-        .body(body.toResponseBody(null))
-        .build()

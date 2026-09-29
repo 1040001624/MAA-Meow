@@ -14,10 +14,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.Protocol
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -134,16 +130,5 @@ class CustomWebhookProviderTest {
             ),
             headers.captured,
         )
-    }
-
-    private fun buildResponse(code: Int, body: String): Response {
-        val request = Request.Builder().url("http://localhost").build()
-        return Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(code)
-            .message("test")
-            .body(body.toResponseBody(null))
-            .build()
     }
 }

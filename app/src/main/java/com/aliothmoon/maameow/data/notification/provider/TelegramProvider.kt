@@ -3,11 +3,13 @@ package com.aliothmoon.maameow.data.notification.provider
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.api.HttpClientHelper
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.domain.models.NotificationImage
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import okhttp3.MultipartBody
 import timber.log.Timber
 
 class TelegramProvider(
@@ -16,6 +18,8 @@ class TelegramProvider(
 ) : NotificationProvider {
 
     override val id = "Telegram"
+
+    override val supportsImage = true
 
     override suspend fun send(title: String, content: String): NotificationSendResult {
         val settings = settingsManager.settings.first()
@@ -56,6 +60,41 @@ class TelegramProvider(
             Timber.e(it, "Telegram send failed")
             NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
         }
+    }
+
+    /** sendPhoto 的 caption 只有 1024 字，放不下日志，文字和图片分两条发 */
+    override suspend fun send(
+        title: String,
+        content: String,
+        image: NotificationImage,
+    ): NotificationSendResult {
+        val result = send(title, content)
+        if (result is NotificationSendResult.Success) sendPhoto(image)
+        return result
+    }
+
+    private suspend fun sendPhoto(image: NotificationImage) {
+        val settings = settingsManager.settings.first()
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("chat_id", settings.telegramChatId)
+            .apply {
+                settings.telegramTopicId.takeIf { it.isNotEmpty() }
+                    ?.let { addFormDataPart("message_thread_id", it) }
+            }
+            .addFormDataPart("photo", image.fileName, image.toRequestBody())
+            .build()
+        runCatching {
+            httpClient.postMultipart("https://api.telegram.org/bot${settings.telegramBotToken}/sendPhoto", body)
+                .use { response ->
+                    val responseBody = response.body.string()
+                    val ok = runCatching { JsonUtils.common.decodeFromString<TelegramResponse>(responseBody).ok }
+                        .getOrDefault(false)
+                    if (!response.isSuccessful || !ok) {
+                        Timber.w("Telegram sendPhoto rejected: HTTP %d, body=%s", response.code, responseBody)
+                    }
+                }
+        }.onFailure { Timber.e(it, "Telegram sendPhoto failed") }
     }
 
     @Serializable

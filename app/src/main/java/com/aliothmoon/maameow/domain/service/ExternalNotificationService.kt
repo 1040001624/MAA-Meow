@@ -4,6 +4,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.notification.provider.NotificationProvider
 import com.aliothmoon.maameow.data.notification.provider.NotificationSendResult
+import com.aliothmoon.maameow.domain.models.NotificationImage
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextJoin
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
@@ -12,7 +13,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -33,7 +38,15 @@ class ExternalNotificationService(
         }
     }
 
-    fun sendWithLogs(title: String, content: String) {
+    /** 已启用的渠道里有能发图的，截图才有去处 */
+    val imageChannelEnabled: StateFlow<Boolean> = settingsManager.enabledProviderIds
+        .map(::hasImageChannel)
+        .stateIn(scope, SharingStarted.Eagerly, hasImageChannel(settingsManager.enabledProviderIds.value))
+
+    private fun hasImageChannel(ids: List<String>): Boolean =
+        ids.any { providers[it]?.supportsImage == true }
+
+    fun sendWithLogs(title: String, content: String, image: NotificationImage? = null) {
         scope.launch {
             val body = if (settingsManager.includeLogDetails.value) {
                 val logs = sessionLogger.logs.value
@@ -42,7 +55,7 @@ class ExternalNotificationService(
             } else {
                 content
             }
-            dispatchToProviders(title, body, isTest = false)
+            dispatchToProviders(title, body, isTest = false, image = image)
         }
     }
 
@@ -52,7 +65,12 @@ class ExternalNotificationService(
         }
     }
 
-    private suspend fun dispatchToProviders(title: String, content: String, isTest: Boolean) {
+    private suspend fun dispatchToProviders(
+        title: String,
+        content: String,
+        isTest: Boolean,
+        image: NotificationImage? = null,
+    ) {
         val enabledIds = settingsManager.enabledProviderIds.value
 
         if (enabledIds.isEmpty()) {
@@ -70,7 +88,13 @@ class ExternalNotificationService(
                 Timber.w("未知通知渠道: $id")
                 null
             } else {
-                runCatching { provider.send(prefixedTitle, content) }
+                runCatching {
+                    if (image != null) {
+                        provider.send(prefixedTitle, content, image)
+                    } else {
+                        provider.send(prefixedTitle, content)
+                    }
+                }
                     .getOrElse {
                         Timber.e(it, "通知渠道 $id 发送异常")
                         NotificationSendResult.Transient(uiTextOf(R.string.notification_err_network))
