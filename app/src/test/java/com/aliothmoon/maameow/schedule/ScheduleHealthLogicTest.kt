@@ -18,6 +18,9 @@ class ScheduleHealthLogicTest {
         exactAlarmAllowed: Boolean = true,
         overlayGranted: Boolean = true,
         overlayNeeded: Boolean = false,
+        deviceSecure: Boolean = false,
+        unlockCredentialReady: Boolean = true,
+        unlockNeeded: Boolean = false,
     ) = ScheduleHealthSnapshot(
         backendGranted = backendGranted,
         batteryWhitelist = batteryWhitelist,
@@ -25,6 +28,9 @@ class ScheduleHealthLogicTest {
         exactAlarmAllowed = exactAlarmAllowed,
         overlayGranted = overlayGranted,
         overlayNeeded = overlayNeeded,
+        deviceSecure = deviceSecure,
+        unlockCredentialReady = unlockCredentialReady,
+        unlockNeeded = unlockNeeded,
     )
 
     @Test
@@ -78,7 +84,49 @@ class ScheduleHealthLogicTest {
         )
     }
 
-    // ===== wizardItems: 保存后向导复用同一判定，仅剔除 BACKEND =====
+    // ===== 解锁凭证：安全锁屏 + 未配凭证 + 有启用策略 才提醒 =====
+
+    private fun unlockSnapshot(
+        deviceSecure: Boolean = true,
+        unlockCredentialReady: Boolean = false,
+        unlockNeeded: Boolean = true,
+    ) = snapshot(
+        deviceSecure = deviceSecure,
+        unlockCredentialReady = unlockCredentialReady,
+        unlockNeeded = unlockNeeded,
+    )
+
+    @Test
+    fun `unlock - secure device without credential is flagged`() {
+        assertEquals(
+            listOf(ScheduleHealthIssue.UNLOCK_CREDENTIAL),
+            ScheduleHealthLogic.failingIssues(unlockSnapshot()),
+        )
+    }
+
+    @Test
+    fun `unlock - no reminder when not secure, credential ready, or no enabled strategy`() {
+        assertTrue(ScheduleHealthLogic.failingIssues(unlockSnapshot(deviceSecure = false)).isEmpty())
+        assertTrue(ScheduleHealthLogic.failingIssues(unlockSnapshot(unlockCredentialReady = true)).isEmpty())
+        assertTrue(ScheduleHealthLogic.failingIssues(unlockSnapshot(unlockNeeded = false)).isEmpty())
+    }
+
+    @Test
+    fun `unlock - listed last and kept out of the wizard`() {
+        val snapshot = snapshot(
+            batteryWhitelist = false,
+            deviceSecure = true,
+            unlockCredentialReady = false,
+            unlockNeeded = true,
+        )
+        assertEquals(
+            listOf(ScheduleHealthIssue.BATTERY, ScheduleHealthIssue.UNLOCK_CREDENTIAL),
+            ScheduleHealthLogic.failingIssues(snapshot),
+        )
+        assertEquals(listOf(ScheduleHealthIssue.BATTERY), ScheduleHealthLogic.wizardItems(snapshot))
+    }
+
+    // ===== wizardItems: 保存后向导复用同一判定，剔除 BACKEND 与解锁凭证 =====
 
     @Test
     fun `wizardItems - drops backend but keeps the rest in order`() {

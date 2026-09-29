@@ -63,6 +63,7 @@ import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.schedule.ui.CountdownDialog
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogView
+import com.aliothmoon.maameow.schedule.ui.ScheduleWakeUnlockView
 import com.aliothmoon.maameow.theme.AppBackgroundHost
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaMotion
@@ -262,6 +263,9 @@ fun AppNavigation(
                     }
                     composable(Routes.SCHEDULE_TRIGGER_LOG) {
                         ScheduleTriggerLogView(navController = navController)
+                    }
+                    composable(Routes.SCHEDULE_WAKE_UNLOCK) {
+                        ScheduleWakeUnlockView(navController = navController)
                     }
                     composable(Routes.TASK_OVERRIDE_EDITOR) {
                         TaskOverrideEditorView(navController = navController)

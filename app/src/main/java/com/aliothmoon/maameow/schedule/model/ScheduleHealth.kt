@@ -22,6 +22,9 @@ enum class ScheduleHealthIssue {
 
     /** 启用的策略勾选了屏保，但悬浮窗未授予 */
     OVERLAY,
+
+    /** 设备有安全锁屏但没配 PIN/手势：触发时若已锁屏会跳过执行 */
+    UNLOCK_CREDENTIAL,
 }
 
 /**
@@ -38,6 +41,12 @@ data class ScheduleHealthSnapshot(
     val overlayGranted: Boolean,
     /** 任一启用策略勾选了屏保选项 */
     val overlayNeeded: Boolean,
+    /** 设备设了 PIN/图案/密码锁屏 */
+    val deviceSecure: Boolean,
+    /** 当前解锁方式的凭证已配好，同 [com.aliothmoon.maameow.domain.models.UnlockCredential.isReady] */
+    val unlockCredentialReady: Boolean,
+    /** 存在启用的策略；没有策略时不提醒 */
+    val unlockNeeded: Boolean,
 )
 
 object ScheduleHealthLogic {
@@ -53,9 +62,14 @@ object ScheduleHealthLogic {
         if (!snapshot.exactAlarmAllowed) add(ScheduleHealthIssue.EXACT_ALARM)
         if (!snapshot.notification) add(ScheduleHealthIssue.NOTIFICATION)
         if (snapshot.overlayNeeded && !snapshot.overlayGranted) add(ScheduleHealthIssue.OVERLAY)
+        if (snapshot.unlockNeeded && snapshot.deviceSecure && !snapshot.unlockCredentialReady) {
+            add(ScheduleHealthIssue.UNLOCK_CREDENTIAL)
+        }
     }
 
-    /** 后端授权是全局前置条件，当场处理不完，留给健康卡 */
+    /** 后端授权、解锁凭证都当场处理不完，留给健康卡 */
     fun wizardItems(snapshot: ScheduleHealthSnapshot): List<ScheduleHealthIssue> =
-        failingIssues(snapshot).filterNot { it == ScheduleHealthIssue.BACKEND }
+        failingIssues(snapshot).filterNot {
+            it == ScheduleHealthIssue.BACKEND || it == ScheduleHealthIssue.UNLOCK_CREDENTIAL
+        }
 }

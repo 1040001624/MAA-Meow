@@ -79,6 +79,10 @@ internal fun scheduleHealthIssueText(
     ScheduleHealthIssue.OVERLAY ->
         stringResource(R.string.schedule_health_overlay) to
                 stringResource(R.string.schedule_health_overlay_desc)
+
+    ScheduleHealthIssue.UNLOCK_CREDENTIAL ->
+        stringResource(R.string.schedule_health_unlock) to
+                stringResource(R.string.schedule_health_unlock_desc)
 }
 
 /** 向导文案：陈述动作（「关闭电池优化」） */
@@ -102,7 +106,8 @@ internal fun schedulePermissionActionText(issue: ScheduleHealthIssue): Pair<Stri
                     stringResource(R.string.schedule_health_overlay_desc)
 
         // 不进向导，回落到卡片文案只为 when 穷尽
-        ScheduleHealthIssue.BACKEND -> scheduleHealthIssueText(issue)
+        ScheduleHealthIssue.BACKEND,
+        ScheduleHealthIssue.UNLOCK_CREDENTIAL -> scheduleHealthIssueText(issue)
     }
 
 @Composable

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -91,9 +92,10 @@ fun ScheduleListView(
         context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
     }
 
-    // 设置页没有结果回调，回来时重读精确闹钟开关
+    // 设置页没有结果回调，回来时重读精确闹钟开关与锁屏方式
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshExactAlarmPermission()
+        viewModel.refreshDeviceSecure()
     }
 
     // 键取布尔而非计数，否则每次启停策略都会重跑整套跨进程探测
@@ -135,6 +137,9 @@ fun ScheduleListView(
 
             ScheduleHealthIssue.OVERLAY ->
                 scope.launch { permissionManager.requestOverlay(context) }
+
+            ScheduleHealthIssue.UNLOCK_CREDENTIAL ->
+                navController.navigate(Routes.SCHEDULE_WAKE_UNLOCK)
         }
     }
 
@@ -151,6 +156,12 @@ fun ScheduleListView(
                                 contentDescription = stringResource(R.string.schedule_exact_alarm_settings),
                             )
                         }
+                    }
+                    IconButton(onClick = { navController.navigate(Routes.SCHEDULE_WAKE_UNLOCK) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.LockOpen,
+                            contentDescription = stringResource(R.string.schedule_wake_unlock_title),
+                        )
                     }
                     IconButton(
                         onClick = { navController.navigate(Routes.SCHEDULE_TRIGGER_LOG) },

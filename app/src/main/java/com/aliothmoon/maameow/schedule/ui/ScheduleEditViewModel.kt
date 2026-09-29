@@ -357,6 +357,10 @@ class ScheduleEditViewModel(
                         exactAlarmAllowed = scheduleAlarmManager.canScheduleExact(),
                         overlayGranted = permissions.overlay,
                         overlayNeeded = it.autoScreenSaver,
+                        // 向导不收解锁项，这三个值不影响结果
+                        deviceSecure = false,
+                        unlockCredentialReady = true,
+                        unlockNeeded = false,
                     )
                 )
             )

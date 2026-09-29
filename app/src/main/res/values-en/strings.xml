@@ -50,7 +50,8 @@
     <string name="settings_debug_mode_title">Debug Mode</string>
     <string name="settings_debug_mode_desc">Record detailed log information when enabled</string>
     <string name="settings_section_display">Display</string>
-    <string name="settings_section_other">Other</string>
+    <string name="settings_section_runtime">Runtime Environment</string>
+    <string name="settings_section_background_run">Background Mode</string>
     <string name="settings_section_task">Task Settings</string>
     <string name="settings_startup_backend_title">Startup Mode</string>
     <string name="settings_startup_backend_desc">Choose how the app obtains system permissions</string>
@@ -125,7 +126,6 @@
     <string name="settings_force_fullscreen_on_virtual_display">Force fullscreen in background mode</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">Applies to the background virtual display only. May not take effect on all devices and can cause extra issues</string>
     <string name="settings_pip_on_home">Auto picture-in-picture on Home</string>
-    <string name="settings_pip_on_home_desc">While a background-mode task is running, pressing Home or swiping to the launcher shrinks the preview into a picture-in-picture window. The game cannot be controlled from that window</string>
     <string name="dialog_enable_force_fullscreen_title">Enable background force fullscreen?</string>
     <string name="dialog_enable_force_fullscreen_message">This may not work on every device and can cause compatibility issues. Continue?</string>
     <string name="settings_wake_unlock_type">Schedule unlock method</string>
@@ -1749,6 +1749,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <!-- i18n: schedule -->
     <string name="schedule_title">Schedule</string>
     <string name="schedule_trigger_log_title">Trigger log</string>
+    <string name="schedule_wake_unlock_title">Wake &amp; Unlock</string>
+    <string name="schedule_wake_unlock_desc">When a scheduled task fires while the device is locked, it unlocks using the method below. Manually started tasks are not affected.</string>
     <string name="schedule_create_strategy">New schedule</string>
     <string name="schedule_empty_state">No schedules yet</string>
     <string name="schedule_empty_hint_add">Tap the button in the upper-right corner to add one</string>
@@ -1830,6 +1832,8 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="schedule_health_notification_desc">Notifications for scheduled runs and failures will be invisible</string>
     <string name="schedule_health_overlay">Overlay permission missing</string>
     <string name="schedule_health_overlay_desc">An enabled screen-saver strategy requires the overlay permission</string>
+    <string name="schedule_health_unlock">Auto-unlock not configured</string>
+    <string name="schedule_health_unlock_desc">The device has a lock-screen password, so a scheduled run is skipped if the device is locked when it fires. Configure a PIN or record an unlock gesture.</string>
     <!-- Trigger log: fix entry for failed results -->
     <string name="schedule_backend_fix_still_not_ready">%1$s is still not authorized: make sure the service is running, or change the startup mode in settings</string>
     <string name="schedule_time_picker_title">Choose time</string>
@@ -1905,7 +1909,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="notification_schedule_title">Scheduled Task</string>
     <string name="notification_schedule_preparing">Preparing to launch…</string>
     <string name="notification_schedule_device_locked">Device is locked</string>
-    <string name="notification_schedule_pin_required">Skipped: a device lock password is set. Configure a PIN or record an unlock gesture in settings, or use "Tasks → Options → Screen Off" instead of the system lock screen</string>
+    <string name="notification_schedule_pin_required">Skipped: a device lock password is set. Configure a PIN or record an unlock gesture in "Schedule → Wake &amp; Unlock", or use "Tasks → Options → Screen Off" instead of the system lock screen</string>
     <string name="notification_schedule_detail">\"%1$s\": %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
@@ -2047,7 +2051,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="onboarding_bg_start_title">Start</string>
     <string name="onboarding_bg_start_body">Tap Start to run the ticked tasks in order; you can stop at any time.\nQuick Options holds toggles such as screen-off idle, close game and mute game.</string>
     <string name="onboarding_schedule_add_title">New Schedule</string>
-    <string name="onboarding_schedule_add_body">Tap here to create one: choose the task profile, trigger time and repeat rule, and the device wakes up and runs it on time. If a lock-screen password is set, configure auto-unlock in Settings.</string>
+    <string name="onboarding_schedule_add_body">Tap here to create one: choose the task profile, trigger time and repeat rule, and the device wakes up and runs it on time. If a lock-screen password is set, configure auto-unlock via "Wake &amp; Unlock" at the top right.</string>
     <string name="onboarding_schedule_list_title">Schedule List</string>
     <string name="onboarding_schedule_list_body">Existing schedules can be toggled and edited here.\nIf a health notice appears at the top (exact alarms, battery optimization, …), fix it first or the schedule may not fire; some ROMs also need auto-start and background permissions.</string>
     <string name="onboarding_schedule_trigger_log_title">Trigger Log</string>

@@ -1,10 +1,15 @@
 package com.aliothmoon.maameow.schedule.ui
 
+import android.app.Application
+import android.app.KeyguardManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aliothmoon.maameow.data.model.TaskProfile
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.preferences.UnlockGestureStore
 import com.aliothmoon.maameow.domain.models.RemoteBackend
+import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ScheduleHealthIssue
@@ -34,10 +39,13 @@ data class ScheduleListUiState(
 )
 
 class ScheduleListViewModel(
+    private val app: Application,
     private val repository: ScheduleStrategyRepository,
     private val taskChainState: TaskChainState,
     private val alarmManager: ScheduleAlarmManager,
     private val permissionManager: PermissionManager,
+    appSettingsManager: AppSettingsManager,
+    unlockGestureStore: UnlockGestureStore,
 ) : ViewModel() {
 
     /**
@@ -46,6 +54,18 @@ class ScheduleListViewModel(
      * 用值本身当上游而非 tick 计数：combine 里不必再查一次 AlarmManager，值没变也不会重算
      */
     private val exactAlarmAllowed = MutableStateFlow(alarmManager.canScheduleExact())
+
+    /** 锁屏方式同样没有 Flow，和精确闹钟一起在回到前台时重读 */
+    private val deviceSecure = MutableStateFlow(readDeviceSecure())
+
+    private val unlockCredentialReady = combine(
+        appSettingsManager.wakeUnlockType,
+        appSettingsManager.wakeCredential,
+        unlockGestureStore.gesture,
+    ) { type, pin, gesture ->
+        val gestureJson = if (gesture == null) "" else unlockGestureStore.readJson()
+        UnlockCredential.of(type, pin, gestureJson).isReady
+    }
 
     private val _state = MutableStateFlow(
         ScheduleListUiState(
@@ -71,7 +91,9 @@ class ScheduleListViewModel(
                 repository.strategies,
                 permissionManager.state,
                 exactAlarmAllowed,
-            ) { strategies, permissions, exactAlarm ->
+                deviceSecure,
+                unlockCredentialReady,
+            ) { strategies, permissions, exactAlarm, secure, credentialReady ->
                 ScheduleHealthLogic.failingIssues(
                     ScheduleHealthSnapshot(
                         backendGranted = permissions.remoteAccessGranted,
@@ -80,6 +102,9 @@ class ScheduleListViewModel(
                         exactAlarmAllowed = exactAlarm,
                         overlayGranted = permissions.overlay,
                         overlayNeeded = ScheduleHealthLogic.overlayNeeded(strategies),
+                        deviceSecure = secure,
+                        unlockCredentialReady = credentialReady,
+                        unlockNeeded = strategies.any { it.enabled },
                     )
                 ) to permissions.startupBackend
             }.collect { (issues, backend) ->
@@ -87,6 +112,14 @@ class ScheduleListViewModel(
             }
         }
     }
+
+    /** 用户可能刚去系统里改了锁屏方式 */
+    fun refreshDeviceSecure() {
+        deviceSecure.value = readDeviceSecure()
+    }
+
+    private fun readDeviceSecure(): Boolean =
+        app.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
 
     /** 从系统设置回来后重读权限并恢复调度 */
     fun refreshExactAlarmPermission() {

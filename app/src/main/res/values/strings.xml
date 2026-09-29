@@ -272,7 +272,8 @@
 
     <!-- settings: other section -->
     <string name="settings_section_display">显示设置</string>
-    <string name="settings_section_other">其他设置</string>
+    <string name="settings_section_runtime">运行环境</string>
+    <string name="settings_section_background_run">后台运行</string>
     <string name="settings_section_task">任务设置</string>
     <string name="settings_startup_backend_title">启动模式</string>
     <string name="settings_startup_backend_desc">选择应用获取系统权限的方式</string>
@@ -347,7 +348,6 @@
     <string name="settings_force_fullscreen_on_virtual_display">后台模式强制全屏模式</string>
     <string name="settings_force_fullscreen_on_virtual_display_desc">仅后台虚拟屏生效。效果因机型而异，不一定生效，也可能带来额外问题</string>
     <string name="settings_pip_on_home">后台运行时自动画中画</string>
-    <string name="settings_pip_on_home_desc">后台模式任务运行中，按 Home 或手势回桌面时自动缩为画中画小窗继续显示画面。小窗内无法操作游戏</string>
     <string name="dialog_enable_force_fullscreen_title">启用后台强制全屏？</string>
     <string name="dialog_enable_force_fullscreen_message">此选项不一定在所有设备上生效，开启后可能出现兼容性问题。确认继续？</string>
     <string name="settings_wake_unlock_type">定时任务解锁方式</string>
@@ -1805,6 +1805,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <!-- i18n: schedule -->
     <string name="schedule_title">定时任务</string>
     <string name="schedule_trigger_log_title">触发日志</string>
+    <string name="schedule_wake_unlock_title">唤醒解锁</string>
+    <string name="schedule_wake_unlock_desc">定时任务触发时若设备已锁屏，会按下面的方式自动解锁；手动启动的任务不受影响</string>
     <string name="schedule_create_strategy">新建策略</string>
     <string name="schedule_empty_state">暂无定时策略</string>
     <string name="schedule_empty_hint_add">点击右上角添加</string>
@@ -1886,6 +1888,8 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="schedule_health_notification_desc">定时执行与失败提醒的通知将不可见</string>
     <string name="schedule_health_overlay">悬浮窗权限未授予</string>
     <string name="schedule_health_overlay_desc">已启用的屏保策略需要悬浮窗权限</string>
+    <string name="schedule_health_unlock">未配置自动解锁</string>
+    <string name="schedule_health_unlock_desc">设备设有锁屏密码，定时触发时若已锁屏会跳过执行。请配置 PIN 或录制解锁手势</string>
     <!-- 触发日志：失败结果修复入口 -->
     <string name="schedule_backend_fix_still_not_ready">%1$s仍未授权：请确认对应服务正在运行，或在设置中更换启动模式</string>
     <string name="schedule_time_picker_title">选择时间</string>
@@ -1961,7 +1965,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="notification_schedule_title">定时任务</string>
     <string name="notification_schedule_preparing">正在准备拉起界面…</string>
     <string name="notification_schedule_device_locked">设备处于锁屏状态</string>
-    <string name="notification_schedule_pin_required">已跳过：设备有锁屏密码。请在设置中配置 PIN 或录制解锁手势，或用「后台任务 → 快捷选项 → 熄屏挂机」代替系统锁屏</string>
+    <string name="notification_schedule_pin_required">已跳过：设备有锁屏密码。请在「定时任务 → 唤醒解锁」中配置 PIN 或录制解锁手势，或用「后台任务 → 快捷选项 → 熄屏挂机」代替系统锁屏</string>
     <string name="notification_schedule_detail">「%1$s」: %2$s</string>
 
     <!-- i18n: schedule trigger journal (pipeline) -->
@@ -2103,7 +2107,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="onboarding_bg_start_title">开始任务</string>
     <string name="onboarding_bg_start_body">点开始后按顺序执行勾选的任务，运行中可随时停止。\n「快捷选项」里有熄屏挂机、关闭游戏、游戏静音等开关</string>
     <string name="onboarding_schedule_add_title">新建定时</string>
-    <string name="onboarding_schedule_add_body">点这里新建：选择要跑的任务方案、触发时间和重复规则，到点自动唤醒设备并执行；如有锁屏密码，可前往设置页配置自动解锁方案</string>
+    <string name="onboarding_schedule_add_body">点这里新建：选择要跑的任务方案、触发时间和重复规则，到点自动唤醒设备并执行；如有锁屏密码，可点右上角「唤醒解锁」配置自动解锁方案</string>
     <string name="onboarding_schedule_list_title">定时列表</string>
     <string name="onboarding_schedule_list_body">已建的定时在这里开关和编辑。\n顶部若出现健康提示（精确闹钟、电池优化等），先按提示修复，否则可能不触发；部分国产 ROM 还需允许自启动和后台运行</string>
     <string name="onboarding_schedule_trigger_log_title">触发记录</string>
