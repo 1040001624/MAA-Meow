@@ -82,7 +82,8 @@ class ScreenSaverOverlayManager(
                     ) {
                         ScreenSaverView(
                             sessionLogger = sessionLogger,
-                            onUnlock = { hideInternal() }
+                            onUnlock = { hideInternal() },
+                            onBrightnessChange = ::setBrightness,
                         )
                     }
                 }
@@ -108,6 +109,14 @@ class ScreenSaverOverlayManager(
             hideInternal()
         }
         return _showing.value
+    }
+
+    private fun setBrightness(value: Float) {
+        val view = composeView ?: return
+        val params = view.layoutParams as? WindowManager.LayoutParams ?: return
+        if (params.screenBrightness == value) return
+        params.screenBrightness = value
+        windowManager.updateViewLayout(view, params)
     }
 
     private fun hideInternal() {
@@ -143,7 +152,7 @@ class ScreenSaverOverlayManager(
             PixelFormat.OPAQUE
         ).apply {
             gravity = Gravity.CENTER
-            screenBrightness = 0.01f // 设置屏幕亮度极暗以省电和防烧屏
+            screenBrightness = DIM_BRIGHTNESS // 设置屏幕亮度极暗以省电和防烧屏
             layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }

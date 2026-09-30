@@ -73,7 +73,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ScreenSaverView(
     sessionLogger: MaaSessionLogger,
-    onUnlock: () -> Unit
+    onUnlock: () -> Unit,
+    onBrightnessChange: (Float) -> Unit = {},
 ) {
     val lastContent by remember(sessionLogger) {
         sessionLogger.logs.map { it.lastOrNull()?.content }.distinctUntilChanged()
@@ -100,7 +101,17 @@ fun ScreenSaverView(
     val barDriftDownPx = with(density) { 40.dp.roundToPx() }
     var barOffsetX by remember { mutableIntStateOf(0) }
     var barOffsetY by remember { mutableIntStateOf(0) }
-    var shimmerWake by remember { mutableIntStateOf(0) }
+    var wakeCount by remember { mutableIntStateOf(0) }
+
+    // 显示和触摸后稍微提亮，方便看清，随后慢慢暗回去
+    LaunchedEffect(wakeCount) {
+        onBrightnessChange(WAKE_BRIGHTNESS)
+        delay(WAKE_HOLD_MS)
+        for (step in 1..DIM_STEPS) {
+            onBrightnessChange(WAKE_BRIGHTNESS + (DIM_BRIGHTNESS - WAKE_BRIGHTNESS) * step / DIM_STEPS)
+            delay(DIM_STEP_MS)
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -122,7 +133,7 @@ fun ScreenSaverView(
                 awaitPointerEventScope {
                     while (true) {
                         if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Press) {
-                            shimmerWake++
+                            wakeCount++
                         }
                     }
                 }
@@ -168,7 +179,7 @@ fun ScreenSaverView(
                 .padding(bottom = 56.dp)
                 .padding(horizontal = 32.dp)
                 .fillMaxWidth(),
-            shimmerWake = shimmerWake,
+            shimmerWake = wakeCount,
             onUnlock = onUnlock
         )
     }
@@ -339,3 +350,9 @@ fun rememberBatteryState(): BatteryState {
 private const val SHIMMER_START = -0.5f
 private const val SHIMMER_END = 1.5f
 private const val SHIMMER_SWEEPS = 3
+
+internal const val DIM_BRIGHTNESS = 0.01f
+private const val WAKE_BRIGHTNESS = 0.15f
+private const val WAKE_HOLD_MS = 6000L
+private const val DIM_STEPS = 10
+private const val DIM_STEP_MS = 150L
