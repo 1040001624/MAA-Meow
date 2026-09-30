@@ -1,9 +1,13 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import android.widget.Toast
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,10 +34,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -43,14 +49,17 @@ import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.models.UnlockStep
 import com.aliothmoon.maameow.presentation.components.CollapsibleSection
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
+import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
+import com.aliothmoon.maameow.presentation.components.horizontalBleed
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.search.ProvideSettingSearch
 import com.aliothmoon.maameow.presentation.search.SettingSearchTarget
 import com.aliothmoon.maameow.presentation.view.settings.SettingSecretField
-import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaDesignTokens
+import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.utils.i18n.resolve
 import org.koin.androidx.compose.koinViewModel
 
@@ -134,29 +143,17 @@ fun ScheduleWakeUnlockView(
                                 onTypeSelected = { viewModel.setWakeUnlockType(it) },
                             )
                         }
-                        MaaAnimatedVisibility(
-                            visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_PIN,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            Column {
-                                ListItemDivider()
-                                SettingWakePinSection(
+                        ListItemDivider()
+                        WakeUnlockTypeContent(type = wakeUnlockType) { type ->
+                            when (type) {
+                                AppSettingsManager.WAKE_TYPE_PIN -> SettingWakePinSection(
                                     contentColor = contentColor,
                                     wakeCredential = wakeCredential,
                                     onCredentialChange = { viewModel.setWakeCredential(it) },
                                     onTest = { viewModel.runWakeTest() },
                                 )
-                            }
-                        }
-                        MaaAnimatedVisibility(
-                            visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_GESTURE,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            Column {
-                                ListItemDivider()
-                                SettingWakeGestureSection(
+
+                                AppSettingsManager.WAKE_TYPE_GESTURE -> SettingWakeGestureSection(
                                     contentColor = contentColor,
                                     gesture = unlockGesture,
                                     recordState = gestureRecordState,
@@ -165,11 +162,55 @@ fun ScheduleWakeUnlockView(
                                     onClear = { viewModel.clearGesture() },
                                     onTest = { viewModel.runWakeTest() },
                                 )
+
+                                else -> Text(
+                                    text = stringResource(R.string.settings_wake_swipe_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = contentColor.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                )
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+private val WAKE_TYPE_ORDER = listOf(
+    AppSettingsManager.WAKE_TYPE_SWIPE,
+    AppSettingsManager.WAKE_TYPE_GESTURE,
+    AppSettingsManager.WAKE_TYPE_PIN,
+)
+
+/** 跟随分段按钮的左右顺序横滑换内容 */
+@Composable
+private fun WakeUnlockTypeContent(
+    type: String,
+    content: @Composable (String) -> Unit,
+) {
+    val reduceMotion = LocalReduceMotion.current
+    // 滑出要裁到卡片边缘而非内边距处，先外扩再缩回
+    val bleed = LocalSettingRowBleed.current
+    AnimatedContent(
+        targetState = type,
+        modifier = Modifier
+            .horizontalBleed(bleed)
+            .clipToBounds(),
+        transitionSpec = {
+            val forward = WAKE_TYPE_ORDER.indexOf(targetState) > WAKE_TYPE_ORDER.indexOf(initialState)
+            val slide = MaaMotion.spec<IntOffset>(reduceMotion, MaaMotion.Page)
+            val enter = slideInHorizontally(slide) { if (forward) it else -it }
+            val exit = slideOutHorizontally(slide) { if (forward) -it else it }
+            (enter togetherWith exit).using(
+                SizeTransform(clip = false) { _, _ -> MaaMotion.spec(reduceMotion, MaaMotion.Page) },
+            )
+        },
+        label = "wakeUnlockType",
+    ) { target ->
+        Box(modifier = Modifier.padding(horizontal = bleed)) {
+            content(target)
         }
     }
 }

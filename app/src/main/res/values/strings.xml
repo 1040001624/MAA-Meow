@@ -368,6 +368,7 @@
     <string name="settings_wake_unlock_type_swipe">滑动解锁</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
     <string name="settings_wake_unlock_type_gesture">手动录制</string>
+    <string name="settings_wake_swipe_desc">亮屏后直接解除锁屏，适用于没设密码的锁屏（无锁屏或上滑即可进入）。设了 PIN、图案或密码时解不开，请改用手动录制或 PIN</string>
     <string name="settings_report_penguin">上报企鹅物流</string>
     <string name="settings_report_penguin_desc">战斗掉落与公招标签上传至 penguin-stats</string>
     <string name="settings_report_yituliu">上报一图流</string>
