@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -55,7 +56,7 @@ class ScheduleListViewModel(
      */
     private val exactAlarmAllowed = MutableStateFlow(alarmManager.canScheduleExact())
 
-    /** 锁屏方式同样没有 Flow，和精确闹钟一起在回到前台时重读 */
+    /** 锁屏方式无 Flow，回前台重读 */
     private val deviceSecure = MutableStateFlow(readDeviceSecure())
 
     private val unlockCredentialReady = combine(
@@ -63,9 +64,8 @@ class ScheduleListViewModel(
         appSettingsManager.wakeCredential,
         unlockGestureStore.gesture,
     ) { type, pin, gesture ->
-        val gestureJson = if (gesture == null) "" else unlockGestureStore.readJson()
-        UnlockCredential.of(type, pin, gestureJson).isReady
-    }
+        UnlockCredential.isReady(type, pin, hasGesture = gesture != null)
+    }.distinctUntilChanged()
 
     private val _state = MutableStateFlow(
         ScheduleListUiState(
@@ -102,9 +102,11 @@ class ScheduleListViewModel(
                         exactAlarmAllowed = exactAlarm,
                         overlayGranted = permissions.overlay,
                         overlayNeeded = ScheduleHealthLogic.overlayNeeded(strategies),
-                        deviceSecure = secure,
-                        unlockCredentialReady = credentialReady,
-                        unlockNeeded = strategies.any { it.enabled },
+                        unlockCredentialMissing = ScheduleHealthLogic.unlockCredentialMissing(
+                            deviceSecure = secure,
+                            credentialReady = credentialReady,
+                            strategies = strategies,
+                        ),
                     )
                 ) to permissions.startupBackend
             }.collect { (issues, backend) ->
@@ -113,7 +115,6 @@ class ScheduleListViewModel(
         }
     }
 
-    /** 用户可能刚去系统里改了锁屏方式 */
     fun refreshDeviceSecure() {
         deviceSecure.value = readDeviceSecure()
     }

@@ -114,6 +114,7 @@ import com.aliothmoon.maameow.overlay.OverlayViewModelOwner
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.navigation.MainTabNavigator
+import com.aliothmoon.maameow.presentation.search.SettingSearchNavigator
 import com.aliothmoon.maameow.schedule.LaunchIntentMapper
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.CountdownUIImpl
@@ -167,6 +168,7 @@ val appModule = module {
     singleOf(::PermissionManager)
     singleOf(::ShizukuReadinessProvider)
     singleOf(::MainTabNavigator)
+    singleOf(::SettingSearchNavigator)
 
 
     single { AppSettingsManager(androidContext(), get()) }

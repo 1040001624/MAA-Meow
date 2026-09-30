@@ -52,6 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -67,6 +68,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -105,9 +107,19 @@ import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
+import com.aliothmoon.maameow.presentation.navigation.MainTabNavigator
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
 import com.aliothmoon.maameow.presentation.onboarding.onboardingTarget
+import com.aliothmoon.maameow.presentation.search.ProvideSettingSearch
+import com.aliothmoon.maameow.presentation.search.SettingLocation
+import com.aliothmoon.maameow.presentation.search.SettingSearchEntry
+import com.aliothmoon.maameow.presentation.search.SettingSearchField
+import com.aliothmoon.maameow.presentation.search.SettingSearchNavigator
+import com.aliothmoon.maameow.presentation.search.SettingSearchResults
+import com.aliothmoon.maameow.presentation.search.SettingSearchTarget
+import com.aliothmoon.maameow.presentation.search.SettingsSections
 import com.aliothmoon.maameow.presentation.viewmodel.AchievementEffect
 import com.aliothmoon.maameow.presentation.viewmodel.AchievementEvent
 import com.aliothmoon.maameow.presentation.viewmodel.AchievementViewModel
@@ -129,8 +141,8 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
-// LazyColumn 里「关于」分区的项序，item 顺序变了要同步
-private const val ABOUT_ITEM_INDEX = 10
+// 第 0 项是搜索框
+private fun sectionItemIndex(sectionKey: String): Int = SettingsSections.ORDER.indexOf(sectionKey) + 1
 private val ONBOARDING_ABOUT_TARGETS = setOf(OnboardingTarget.ABOUT_HELP)
 
 @Composable
@@ -184,6 +196,30 @@ fun SettingsView(
     // 首启引导：靶点在「关于」分区内，先滚进视野并强制展开分区；pager 重建后 effect 重跑自动补滚
     val onboarding = LocalOnboardingState.current
     val settingsListState = rememberLazyListState()
+
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    // 只让列表读是否在搜，输入时不重组整页
+    val isSearching by remember { derivedStateOf { searchQuery.isNotBlank() } }
+    val searchNavigator: SettingSearchNavigator = koinInject()
+    val mainTabNavigator: MainTabNavigator = koinInject()
+    val focusManager = LocalFocusManager.current
+    val pendingSearch by searchNavigator.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingSearch) {
+        val location = pendingSearch?.entry?.location as? SettingLocation.Section ?: return@LaunchedEffect
+        settingsListState.scrollToItem(sectionItemIndex(location.sectionKey))
+    }
+    fun revealToken(sectionKey: String) =
+        pendingSearch?.takeIf { (it.entry.location as? SettingLocation.Section)?.sectionKey == sectionKey }
+    fun openSearchResult(entry: SettingSearchEntry) {
+        focusManager.clearFocus()
+        searchQuery = ""
+        searchNavigator.request(entry)
+        when (val location = entry.location) {
+            is SettingLocation.Section -> Unit
+            is SettingLocation.Page -> navController.navigate(location.route)
+            SettingLocation.BackgroundActions -> mainTabNavigator.navigateTo(BottomNavTab.BACKGROUND)
+        }
+    }
     val reduceMotion = LocalReduceMotion.current
     val onboardingInAbout =
         onboarding?.takeIf { it.active }?.currentStep?.target in ONBOARDING_ABOUT_TARGETS
@@ -193,9 +229,9 @@ fun SettingsView(
             .collectLatest { target ->
                 if (target !in ONBOARDING_ABOUT_TARGETS) return@collectLatest
                 if (reduceMotion) {
-                    settingsListState.scrollToItem(ABOUT_ITEM_INDEX)
+                    settingsListState.scrollToItem(sectionItemIndex(SettingsSections.ABOUT))
                 } else {
-                    settingsListState.animateScrollToItem(ABOUT_ITEM_INDEX)
+                    settingsListState.animateScrollToItem(sectionItemIndex(SettingsSections.ABOUT))
                 }
             }
     }
@@ -489,599 +525,682 @@ fun SettingsView(
     ) { paddingValues ->
         val contentColor = MaterialTheme.colorScheme.onSurface
 
-        LazyColumn(
-            state = settingsListState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(
-                horizontal = MaaDesignTokens.Spacing.listHorizontal,
-                vertical = MaaDesignTokens.Spacing.sm
-            ),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sectionGap)
-        ) {
-            // 更新管理
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_update),
-                    sectionKey = "settings_section_update",
-                ) {
-                    SettingsGroupCard {
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_reinit_resource_title),
-                            description = stringResource(R.string.settings_reinit_resource_desc),
-                            contentColor = contentColor
-                        ) {
-                            showReInitConfirm = true
-                        }
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_auto_check_update_title),
-                            description = stringResource(R.string.settings_auto_check_update_desc),
-                            contentColor = contentColor,
-                            checked = autoCheckUpdate,
-                            onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
-                        )
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_auto_download_update_title),
-                            description = stringResource(R.string.settings_auto_download_update_desc),
-                            contentColor = contentColor,
-                            checked = autoDownloadUpdate,
-                            enabled = autoCheckUpdate,
-                            onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
-                        )
-                        ListItemDivider()
-                        SettingChannelItem(
-                            contentColor = contentColor,
-                            selectedChannel = updateChannel,
-                            onChannelSelected = { viewModel.setUpdateChannel(it) }
-                        )
-                    }
+        ProvideSettingSearch(pendingSearch, searchNavigator) {
+            LazyColumn(
+                state = settingsListState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(
+                    horizontal = MaaDesignTokens.Spacing.listHorizontal,
+                    vertical = MaaDesignTokens.Spacing.sm
+                ),
+                verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sectionGap)
+            ) {
+                item {
+                    SettingSearchField(query = searchQuery, onQueryChange = { searchQuery = it })
                 }
-            }
+                if (isSearching) {
+                    item {
+                        SettingSearchResults(query = searchQuery, onClick = ::openSearchResult)
+                    }
+                    return@LazyColumn
+                }
 
-            // 日志
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_log),
-                    sectionKey = "settings_section_log",
-                ) {
-                    SettingsGroupCard {
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_log_history_title),
-                            description = stringResource(R.string.settings_log_history_desc),
-                            contentColor = contentColor
-                        ) {
-                            navController.navigate("log_history")
-                        }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_log_error_title),
-                            description = stringResource(R.string.settings_log_error_desc),
-                            contentColor = contentColor
-                        ) {
-                            navController.navigate("error_log")
-                        }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_log_export_title),
-                            description = stringResource(R.string.settings_log_export_desc),
-                            contentColor = contentColor
-                        ) {
-                            showExportSheet = true
-                        }
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_debug_mode_title),
-                            description = stringResource(R.string.settings_debug_mode_desc),
-                            contentColor = contentColor,
-                            checked = debugMode,
-                            onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    showDebugModeConfirm = true
-                                } else {
-                                    viewModel.setDebugMode(false)
+                // 更新管理
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_update),
+                        sectionKey = SettingsSections.UPDATE,
+                        revealToken = revealToken(SettingsSections.UPDATE),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_reinit_resource_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_reinit_resource_title),
+                                    description = stringResource(R.string.settings_reinit_resource_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    showReInitConfirm = true
                                 }
                             }
-                        )
-                    }
-                }
-            }
-
-            // 显示设置
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_display),
-                    sectionKey = "settings_section_display",
-                ) {
-                    SettingsGroupCard {
-                        SettingLanguageItem(
-                            contentColor = contentColor,
-                            selectedLanguage = language,
-                            onLanguageSelected = { viewModel.setLanguage(it) }
-                        )
-                        ListItemDivider()
-                        SettingThemeSection(
-                            contentColor = contentColor,
-                            selectedMode = themeMode,
-                            onModeSelected = { viewModel.setThemeMode(it) },
-                            useSystemMonetColor = useSystemMonetColor,
-                            onMonetColorChanged = { viewModel.setUseSystemMonetColor(it) },
-                            fontSizeScale = fontSizeScale,
-                            onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
-                        )
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_background_title),
-                            description = stringResource(R.string.settings_background_desc),
-                            contentColor = contentColor
-                        ) {
-                            navController.navigate(Routes.WALLPAPER)
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_auto_check_update_title) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_auto_check_update_title),
+                                    description = stringResource(R.string.settings_auto_check_update_desc),
+                                    contentColor = contentColor,
+                                    checked = autoCheckUpdate,
+                                    onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_auto_download_update_title) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_auto_download_update_title),
+                                    description = stringResource(R.string.settings_auto_download_update_desc),
+                                    contentColor = contentColor,
+                                    checked = autoDownloadUpdate,
+                                    enabled = autoCheckUpdate,
+                                    onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_update_channel_title) {
+                                SettingChannelItem(
+                                    contentColor = contentColor,
+                                    selectedChannel = updateChannel,
+                                    onChannelSelected = { viewModel.setUpdateChannel(it) }
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // 运行环境：提权后端与 MaaCore 数据
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_runtime),
-                    sectionKey = "settings_section_runtime",
-                ) {
-                    SettingsGroupCard {
-                        SettingRadioItem(
-                            title = stringResource(R.string.settings_startup_backend_title),
-                            contentColor = contentColor,
-                            entries = RemoteBackend.entries,
-                            selected = startupBackend,
-                            label = { it.display },
-                            onSelected = { viewModel.setStartupBackend(it) }
-                        )
-                        ListItemDivider()
-                        SettingRadioItem(
-                            title = stringResource(R.string.settings_core_data_location_title),
-                            contentColor = contentColor,
-                            entries = CoreDataLocation.entries,
-                            selected = coreDataLocation,
-                            label = { stringResource(it.labelRes()) },
-                            onSelected = { viewModel.requestCoreDataLocationChange(it) }
-                        )
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_core_data_clear_title),
-                            contentColor = contentColor
-                        ) {
-                            viewModel.requestClearCoreData()
+                // 日志
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_log),
+                        sectionKey = SettingsSections.LOG,
+                        revealToken = revealToken(SettingsSections.LOG),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_log_history_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_log_history_title),
+                                    description = stringResource(R.string.settings_log_history_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate("log_history")
+                                }
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_log_error_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_log_error_title),
+                                    description = stringResource(R.string.settings_log_error_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate("error_log")
+                                }
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_log_export_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_log_export_title),
+                                    description = stringResource(R.string.settings_log_export_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    showExportSheet = true
+                                }
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_debug_mode_title) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_debug_mode_title),
+                                    description = stringResource(R.string.settings_debug_mode_desc),
+                                    contentColor = contentColor,
+                                    checked = debugMode,
+                                    onCheckedChange = { enabled ->
+                                        if (enabled) {
+                                            showDebugModeConfirm = true
+                                        } else {
+                                            viewModel.setDebugMode(false)
+                                        }
+                                    }
+                                )
+                            }
                         }
-                        ListItemDivider()
-                        if (startupBackend == RemoteBackend.SHIZUKU) {
-                            SettingSwitchItem(
-                                title = stringResource(R.string.settings_shizuku_launch_mode_title),
-                                description = stringResource(R.string.settings_shizuku_launch_mode_desc),
-                                contentColor = contentColor,
-                                checked = shizukuShortcutEnabled,
-                                onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
+                    }
+                }
+
+                // 显示设置
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_display),
+                        sectionKey = SettingsSections.DISPLAY,
+                        revealToken = revealToken(SettingsSections.DISPLAY),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_language_title) {
+                                SettingLanguageItem(
+                                    contentColor = contentColor,
+                                    selectedLanguage = language,
+                                    onLanguageSelected = { viewModel.setLanguage(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_theme_title) {
+                                SettingThemeSection(
+                                    contentColor = contentColor,
+                                    selectedMode = themeMode,
+                                    onModeSelected = { viewModel.setThemeMode(it) },
+                                    useSystemMonetColor = useSystemMonetColor,
+                                    onMonetColorChanged = { viewModel.setUseSystemMonetColor(it) },
+                                    fontSizeScale = fontSizeScale,
+                                    onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_background_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_background_title),
+                                    description = stringResource(R.string.settings_background_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.WALLPAPER)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 运行环境
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_runtime),
+                        sectionKey = SettingsSections.RUNTIME,
+                        revealToken = revealToken(SettingsSections.RUNTIME),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_startup_backend_title) {
+                                SettingRadioItem(
+                                    title = stringResource(R.string.settings_startup_backend_title),
+                                    contentColor = contentColor,
+                                    entries = RemoteBackend.entries,
+                                    selected = startupBackend,
+                                    label = { it.display },
+                                    onSelected = { viewModel.setStartupBackend(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_core_data_location_title) {
+                                SettingRadioItem(
+                                    title = stringResource(R.string.settings_core_data_location_title),
+                                    contentColor = contentColor,
+                                    entries = CoreDataLocation.entries,
+                                    selected = coreDataLocation,
+                                    label = { stringResource(it.labelRes()) },
+                                    onSelected = { viewModel.requestCoreDataLocationChange(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_core_data_clear_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_core_data_clear_title),
+                                    contentColor = contentColor
+                                ) {
+                                    viewModel.requestClearCoreData()
+                                }
+                            }
+                            ListItemDivider()
+                            if (startupBackend == RemoteBackend.SHIZUKU) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_shizuku_launch_mode_title),
+                                    description = stringResource(R.string.settings_shizuku_launch_mode_desc),
+                                    contentColor = contentColor,
+                                    checked = shizukuShortcutEnabled,
+                                    onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
+                                )
+                                ListItemDivider()
+                                MaaAnimatedVisibility(
+                                    visible = shizukuShortcutEnabled,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically()
+                                ) {
+                                    Column {
+                                        val shizukuLaunchAppName =
+                                            ShizukuInstallHelper.getLaunchAppLabel(
+                                                context,
+                                                shizukuLaunchPackage
+                                            )
+                                        val shizukuLaunchAppDescription =
+                                            if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
+                                                stringResource(R.string.settings_shizuku_launch_app_default_desc)
+                                            } else {
+                                                stringResource(
+                                                    R.string.settings_shizuku_launch_app_selected_desc,
+                                                    shizukuLaunchAppName ?: shizukuLaunchPackage
+                                                )
+                                            }
+                                        SettingClickItem(
+                                            title = stringResource(R.string.settings_shizuku_launch_app_title),
+                                            description = shizukuLaunchAppDescription,
+                                            contentColor = contentColor
+                                        ) {
+                                            // 先弹窗再异步查列表，免得点了没反应
+                                            shizukuAppSearch = ""
+                                            shizukuAppPickerLoadKey += 1
+                                            showShizukuAppPicker = true
+                                        }
+                                        ListItemDivider()
+                                        SettingClickItem(
+                                            title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
+                                            description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
+                                            contentColor = contentColor
+                                        ) {
+                                            viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
+                                        }
+                                        ListItemDivider()
+                                    }
+                                }
+                            }
+                            SettingSearchTarget(R.string.settings_skip_shizuku_check) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_skip_shizuku_check),
+                                    contentColor = contentColor,
+                                    checked = skipShizukuCheck,
+                                    enabled = startupBackend == RemoteBackend.SHIZUKU,
+                                    onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 后台运行
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_background_run),
+                        sectionKey = SettingsSections.BACKGROUND_RUN,
+                        revealToken = revealToken(SettingsSections.BACKGROUND_RUN),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_background_resolution_title) {
+                                SettingBackgroundResolutionItem(
+                                    contentColor = contentColor,
+                                    selectedPreference = backgroundResolution,
+                                    onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_force_fullscreen_on_virtual_display) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
+                                    description = stringResource(R.string.settings_force_fullscreen_on_virtual_display_desc),
+                                    contentColor = contentColor,
+                                    checked = forceFullscreenOnVirtualDisplay,
+                                    onCheckedChange = { enabled ->
+                                        if (enabled) {
+                                            showForceFullscreenConfirm = true
+                                        } else {
+                                            viewModel.setForceFullscreenOnVirtualDisplay(false)
+                                        }
+                                    }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_pip_on_home) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_pip_on_home),
+                                    contentColor = contentColor,
+                                    checked = pipOnHome,
+                                    onCheckedChange = { viewModel.setPipOnHome(it) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 三方服务：数据上报与一图流 OpenAPI
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_third_party),
+                        sectionKey = SettingsSections.THIRD_PARTY,
+                        revealToken = revealToken(SettingsSections.THIRD_PARTY),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_report_penguin) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_report_penguin),
+                                    description = stringResource(R.string.settings_report_penguin_desc),
+                                    contentColor = contentColor,
+                                    checked = reportToPenguin,
+                                    onCheckedChange = { viewModel.setReportToPenguin(it) }
+                                )
+                            }
+                            // ID 只归企鹅物流，一图流的掉落上报不带 ID
+                            MaaAnimatedVisibility(
+                                visible = reportToPenguin,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                Column {
+                                    ListItemDivider()
+                                    SettingPenguinIdField(
+                                        penguinId = penguinId,
+                                        onIdChange = { viewModel.setPenguinId(it) },
+                                    )
+                                }
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_report_yituliu) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_report_yituliu),
+                                    description = stringResource(R.string.settings_report_yituliu_desc),
+                                    contentColor = contentColor,
+                                    checked = reportToYituliu,
+                                    onCheckedChange = { viewModel.setReportToYituliu(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingYituliuTokenSection(
+                                token = yituliuOpenApiToken,
+                                verifying = yituliuVerifying,
+                                verifyMessage = yituliuVerifyMessage,
+                                onTokenChange = { viewModel.setYituliuOpenApiToken(it) },
+                                onVerify = { viewModel.verifyYituliuToken() },
                             )
                             ListItemDivider()
+                            SettingSearchTarget(R.string.settings_oper_box_yituliu_title) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_oper_box_yituliu_title),
+                                    description = stringResource(R.string.settings_oper_box_yituliu_desc),
+                                    contentColor = contentColor,
+                                    checked = operBoxUseYituliuApi,
+                                    onCheckedChange = { viewModel.setOperBoxUseYituliuApi(it) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 任务设置：划火柴模式、MAA 任务覆盖
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_task),
+                        sectionKey = SettingsSections.TASK,
+                        revealToken = revealToken(SettingsSections.TASK),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_deploy_with_pause) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_deploy_with_pause),
+                                    description = stringResource(R.string.settings_deploy_with_pause_desc),
+                                    contentColor = contentColor,
+                                    checked = deployWithPause,
+                                    onCheckedChange = { viewModel.setDeployWithPause(it) }
+                                )
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_tasks_override_title) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_tasks_override_title),
+                                    description = stringResource(R.string.settings_tasks_override_desc),
+                                    contentColor = contentColor,
+                                    checked = tasksOverrideEnabled,
+                                    onCheckedChange = { viewModel.setTasksOverrideEnabled(it) }
+                                )
+                            }
                             MaaAnimatedVisibility(
-                                visible = shizukuShortcutEnabled,
+                                visible = tasksOverrideEnabled,
                                 enter = expandVertically(),
                                 exit = shrinkVertically()
                             ) {
                                 Column {
-                                    val shizukuLaunchAppName =
-                                        ShizukuInstallHelper.getLaunchAppLabel(
-                                            context,
-                                            shizukuLaunchPackage
-                                        )
-                                    val shizukuLaunchAppDescription =
-                                        if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
-                                            stringResource(R.string.settings_shizuku_launch_app_default_desc)
-                                        } else {
-                                            stringResource(
-                                                R.string.settings_shizuku_launch_app_selected_desc,
-                                                shizukuLaunchAppName ?: shizukuLaunchPackage
-                                            )
-                                        }
-                                    SettingClickItem(
-                                        title = stringResource(R.string.settings_shizuku_launch_app_title),
-                                        description = shizukuLaunchAppDescription,
-                                        contentColor = contentColor
-                                    ) {
-                                        // 先展示弹窗，再异步查询应用列表，避免点击后长时间无反馈。
-                                        shizukuAppSearch = ""
-                                        shizukuAppPickerLoadKey += 1
-                                        showShizukuAppPicker = true
-                                    }
                                     ListItemDivider()
                                     SettingClickItem(
-                                        title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
-                                        description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
+                                        title = stringResource(R.string.settings_tasks_override_edit_title),
                                         contentColor = contentColor
                                     ) {
-                                        viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
+                                        navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
                                     }
-                                    ListItemDivider()
                                 }
                             }
                         }
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_skip_shizuku_check),
-                            contentColor = contentColor,
-                            checked = skipShizukuCheck,
-                            enabled = startupBackend == RemoteBackend.SHIZUKU,
-                            onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
-                        )
                     }
                 }
-            }
 
-            // 后台运行：虚拟屏与画中画
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_background_run),
-                    sectionKey = "settings_section_background_run",
-                ) {
-                    SettingsGroupCard {
-                        SettingBackgroundResolutionItem(
-                            contentColor = contentColor,
-                            selectedPreference = backgroundResolution,
-                            onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
-                        )
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
-                            description = stringResource(R.string.settings_force_fullscreen_on_virtual_display_desc),
-                            contentColor = contentColor,
-                            checked = forceFullscreenOnVirtualDisplay,
-                            onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    showForceFullscreenConfirm = true
-                                } else {
-                                    viewModel.setForceFullscreenOnVirtualDisplay(false)
-                                }
-                            }
-                        )
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_pip_on_home),
-                            contentColor = contentColor,
-                            checked = pipOnHome,
-                            onCheckedChange = { viewModel.setPipOnHome(it) }
-                        )
-                    }
-                }
-            }
-
-            // 三方服务：数据上报与一图流 OpenAPI
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_third_party),
-                    sectionKey = "settings_section_third_party",
-                ) {
-                    SettingsGroupCard {
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_report_penguin),
-                            description = stringResource(R.string.settings_report_penguin_desc),
-                            contentColor = contentColor,
-                            checked = reportToPenguin,
-                            onCheckedChange = { viewModel.setReportToPenguin(it) }
-                        )
-                        // ID 只归企鹅物流，一图流的掉落上报不带 ID
-                        MaaAnimatedVisibility(
-                            visible = reportToPenguin,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            Column {
-                                ListItemDivider()
-                                SettingPenguinIdField(
-                                    penguinId = penguinId,
-                                    onIdChange = { viewModel.setPenguinId(it) },
-                                )
-                            }
-                        }
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_report_yituliu),
-                            description = stringResource(R.string.settings_report_yituliu_desc),
-                            contentColor = contentColor,
-                            checked = reportToYituliu,
-                            onCheckedChange = { viewModel.setReportToYituliu(it) }
-                        )
-                        ListItemDivider()
-                        SettingYituliuTokenSection(
-                            token = yituliuOpenApiToken,
-                            verifying = yituliuVerifying,
-                            verifyMessage = yituliuVerifyMessage,
-                            onTokenChange = { viewModel.setYituliuOpenApiToken(it) },
-                            onVerify = { viewModel.verifyYituliuToken() },
-                        )
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_oper_box_yituliu_title),
-                            description = stringResource(R.string.settings_oper_box_yituliu_desc),
-                            contentColor = contentColor,
-                            checked = operBoxUseYituliuApi,
-                            onCheckedChange = { viewModel.setOperBoxUseYituliuApi(it) }
-                        )
-                    }
-                }
-            }
-
-            // 任务设置：划火柴模式、MAA 任务覆盖
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_task),
-                    sectionKey = "settings_section_task",
-                ) {
-                    SettingsGroupCard {
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_deploy_with_pause),
-                            description = stringResource(R.string.settings_deploy_with_pause_desc),
-                            contentColor = contentColor,
-                            checked = deployWithPause,
-                            onCheckedChange = { viewModel.setDeployWithPause(it) }
-                        )
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_tasks_override_title),
-                            description = stringResource(R.string.settings_tasks_override_desc),
-                            contentColor = contentColor,
-                            checked = tasksOverrideEnabled,
-                            onCheckedChange = { viewModel.setTasksOverrideEnabled(it) }
-                        )
-                        MaaAnimatedVisibility(
-                            visible = tasksOverrideEnabled,
-                            enter = expandVertically(),
-                            exit = shrinkVertically()
-                        ) {
-                            Column {
-                                ListItemDivider()
+                // 数据管理
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_data),
+                        sectionKey = SettingsSections.DATA,
+                        revealToken = revealToken(SettingsSections.DATA),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_export_config_title) {
                                 SettingClickItem(
-                                    title = stringResource(R.string.settings_tasks_override_edit_title),
+                                    title = stringResource(R.string.settings_export_config_title),
+                                    description = stringResource(R.string.settings_export_config_desc),
                                     contentColor = contentColor
                                 ) {
-                                    navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
+                                    exportLauncher.launch("maameow_config.json")
+                                }
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_import_config_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_import_config_title),
+                                    description = stringResource(R.string.settings_import_config_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    importLauncher.launch(arrayOf("application/json"))
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // 数据管理
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_data),
-                    sectionKey = "settings_section_data",
-                ) {
-                    SettingsGroupCard {
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_export_config_title),
-                            description = stringResource(R.string.settings_export_config_desc),
-                            contentColor = contentColor
-                        ) {
-                            exportLauncher.launch("maameow_config.json")
-                        }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_import_config_title),
-                            description = stringResource(R.string.settings_import_config_desc),
-                            contentColor = contentColor
-                        ) {
-                            importLauncher.launch(arrayOf("application/json"))
-                        }
-                    }
-                }
-            }
-
-            // 通知
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_notification),
-                    sectionKey = "settings_section_notification",
-                ) {
-                    SettingsGroupCard {
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_notification_title),
-                            description = stringResource(R.string.settings_notification_desc),
-                            contentColor = contentColor
-                        ) {
-                            navController.navigate(Routes.NOTIFICATION)
-                        }
-                        if (liveUpdateEntryVisible) {
-                            ListItemDivider()
-                            SettingClickItem(
-                                title = stringResource(R.string.settings_live_update_title),
-                                description = stringResource(R.string.settings_live_update_desc),
-                                contentColor = contentColor
-                            ) {
-                                navController.navigate(Routes.LIVE_UPDATE)
+                // 通知
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_notification),
+                        sectionKey = SettingsSections.NOTIFICATION,
+                        revealToken = revealToken(SettingsSections.NOTIFICATION),
+                    ) {
+                        SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_notification_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_notification_title),
+                                    description = stringResource(R.string.settings_notification_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.NOTIFICATION)
+                                }
+                            }
+                            if (liveUpdateEntryVisible) {
+                                ListItemDivider()
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_live_update_title),
+                                    description = stringResource(R.string.settings_live_update_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.LIVE_UPDATE)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // 成就（帕拉斯头像在分栏卡片内第一项）
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_achievement),
-                    sectionKey = "settings_section_achievement",
-                ) {
-                    SettingsGroupCard {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = MaaDesignTokens.Spacing.md),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
-                        ) {
-                            PallasMedal(
-                                debugActive = achievementUiState.pallasDebugActive,
-                                onClick = {
-                                    achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
-                                },
-                            )
-                            MaaAnimatedVisibility(
-                                visible = achievementUiState.pallasDebugActive,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically(),
+                // 成就（帕拉斯头像在分栏卡片内第一项）
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_achievement),
+                        sectionKey = SettingsSections.ACHIEVEMENT,
+                        revealToken = revealToken(SettingsSections.ACHIEVEMENT),
+                    ) {
+                        SettingsGroupCard {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = MaaDesignTokens.Spacing.md),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(
-                                        MaaDesignTokens.Spacing.sm,
-                                        Alignment.CenterHorizontally,
-                                    ),
+                                PallasMedal(
+                                    debugActive = achievementUiState.pallasDebugActive,
+                                    onClick = {
+                                        achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
+                                    },
+                                )
+                                MaaAnimatedVisibility(
+                                    visible = achievementUiState.pallasDebugActive,
+                                    enter = fadeIn() + expandVertically(),
+                                    exit = fadeOut() + shrinkVertically(),
                                 ) {
-                                    StaySober {
-                                        Button(
-                                            onClick = {
-                                                achievementViewModel.onEvent(AchievementEvent.UnlockAll)
-                                            },
-                                            shape = MaterialTheme.shapes.small,
-                                        ) {
-                                            Text(stringResource(R.string.achievement_debug_unlock_all))
-                                        }
-                                        OutlinedButton(
-                                            onClick = {
-                                                achievementViewModel.onEvent(AchievementEvent.ClearAllRecords)
-                                            },
-                                            shape = MaterialTheme.shapes.small,
-                                        ) {
-                                            Text(stringResource(R.string.achievement_debug_clear_all))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(
+                                            MaaDesignTokens.Spacing.sm,
+                                            Alignment.CenterHorizontally,
+                                        ),
+                                    ) {
+                                        StaySober {
+                                            Button(
+                                                onClick = {
+                                                    achievementViewModel.onEvent(AchievementEvent.UnlockAll)
+                                                },
+                                                shape = MaterialTheme.shapes.small,
+                                            ) {
+                                                Text(stringResource(R.string.achievement_debug_unlock_all))
+                                            }
+                                            OutlinedButton(
+                                                onClick = {
+                                                    achievementViewModel.onEvent(AchievementEvent.ClearAllRecords)
+                                                },
+                                                shape = MaterialTheme.shapes.small,
+                                            ) {
+                                                Text(stringResource(R.string.achievement_debug_clear_all))
+                                            }
                                         }
                                     }
                                 }
                             }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_achievement_title) {
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_achievement_title),
+                                    description = stringResource(R.string.settings_achievement_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.ACHIEVEMENT)
+                                }
+                            }
+                            ListItemDivider()
+                            SettingSearchTarget(R.string.settings_achievement_snackbar_title) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_achievement_snackbar_title),
+                                    description = stringResource(R.string.settings_achievement_snackbar_desc),
+                                    contentColor = contentColor,
+                                    checked = showAchievementSnackbar,
+                                    onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
+                                )
+                            }
+                            if (BuildConfig.DEBUG) {
+                                ListItemDivider()
+                                SettingClickItem(
+                                    title = stringResource(R.string.settings_achievement_debug_title),
+                                    description = stringResource(R.string.settings_achievement_debug_desc),
+                                    contentColor = contentColor
+                                ) {
+                                    navController.navigate(Routes.ACHIEVEMENT_DEBUG)
+                                }
+                            }
                         }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_achievement_title),
-                            description = stringResource(R.string.settings_achievement_desc),
-                            contentColor = contentColor
-                        ) {
-                            navController.navigate(Routes.ACHIEVEMENT)
-                        }
-                        ListItemDivider()
-                        SettingSwitchItem(
-                            title = stringResource(R.string.settings_achievement_snackbar_title),
-                            description = stringResource(R.string.settings_achievement_snackbar_desc),
-                            contentColor = contentColor,
-                            checked = showAchievementSnackbar,
-                            onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
-                        )
-                        if (BuildConfig.DEBUG) {
+                    }
+                }
+
+                // 关于
+                item {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_about),
+                        sectionKey = SettingsSections.ABOUT,
+                        forceExpanded = onboardingInAbout,
+                        revealToken = revealToken(SettingsSections.ABOUT),
+                    ) {
+                        SettingsGroupCard {
+                            SettingInfoRow(
+                                label = stringResource(R.string.settings_about_version),
+                                value = BuildConfig.VERSION_NAME,
+                                contentColor = contentColor,
+                            )
+                            ListItemDivider()
+                            SettingInfoRow(
+                                label = stringResource(R.string.settings_about_developer),
+                                value = "Aliothmoon",
+                                contentColor = contentColor
+                            )
+                            ListItemDivider()
+                            // 两行合为一个引导靶点
+                            Column(
+                                modifier = Modifier.onboardingTarget(OnboardingTarget.ABOUT_HELP),
+                            ) {
+                                SettingSearchTarget(R.string.settings_about_faq_title) {
+                                    SettingClickItem(
+                                        title = stringResource(R.string.settings_about_faq_title),
+                                        description = stringResource(R.string.settings_about_faq_desc),
+                                        contentColor = contentColor,
+                                    ) {
+                                        Misc.openUriSafely(context, MaaApi.FAQ_URL)
+                                    }
+                                }
+                                ListItemDivider()
+                                SettingSearchTarget(R.string.settings_about_feedback_title) {
+                                    SettingClickItem(
+                                        title = stringResource(R.string.settings_about_feedback_title),
+                                        description = stringResource(R.string.settings_about_feedback_desc),
+                                        contentColor = contentColor,
+                                    ) {
+                                        Misc.openUriSafely(context, MaaApi.FEEDBACK_URL)
+                                    }
+                                }
+                            }
                             ListItemDivider()
                             SettingClickItem(
-                                title = stringResource(R.string.settings_achievement_debug_title),
-                                description = stringResource(R.string.settings_achievement_debug_desc),
+                                title = stringResource(R.string.settings_about_qq_group_title),
+                                description = stringResource(R.string.settings_about_qq_group_desc),
                                 contentColor = contentColor
                             ) {
-                                navController.navigate(Routes.ACHIEVEMENT_DEBUG)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 关于（ABOUT_ITEM_INDEX 指向这一项）
-            item {
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_about),
-                    sectionKey = "settings_section_about",
-                    forceExpanded = onboardingInAbout,
-                ) {
-                    SettingsGroupCard {
-                        SettingInfoRow(
-                            label = stringResource(R.string.settings_about_version),
-                            value = BuildConfig.VERSION_NAME,
-                            contentColor = contentColor,
-                        )
-                        ListItemDivider()
-                        SettingInfoRow(
-                            label = stringResource(R.string.settings_about_developer),
-                            value = "Aliothmoon",
-                            contentColor = contentColor
-                        )
-                        ListItemDivider()
-                        // 两行合为一个引导靶点
-                        Column(
-                            modifier = Modifier.onboardingTarget(OnboardingTarget.ABOUT_HELP),
-                        ) {
-                            SettingClickItem(
-                                title = stringResource(R.string.settings_about_faq_title),
-                                description = stringResource(R.string.settings_about_faq_desc),
-                                contentColor = contentColor,
-                            ) {
-                                Misc.openUriSafely(context, MaaApi.FAQ_URL)
+                                achievementReporter.reportFeedbackGroupOpened()
+                                Misc.openUriSafely(context, "https://join.maameow.com/")
                             }
                             ListItemDivider()
                             SettingClickItem(
-                                title = stringResource(R.string.settings_about_feedback_title),
-                                description = stringResource(R.string.settings_about_feedback_desc),
-                                contentColor = contentColor,
+                                title = stringResource(R.string.settings_about_changelog),
+                                contentColor = contentColor
                             ) {
-                                Misc.openUriSafely(context, MaaApi.FEEDBACK_URL)
+                                viewModel.onShowChangelog()
                             }
+                            ListItemDivider()
+                            SettingClickItem(
+                                title = stringResource(R.string.settings_about_announcement),
+                                contentColor = contentColor
+                            ) {
+                                onViewAnnouncement()
+                            }
+                            ListItemDivider()
+                            SettingClickItem(
+                                title = stringResource(R.string.settings_about_onboarding),
+                                description = stringResource(R.string.settings_about_onboarding_desc),
+                                contentColor = contentColor
+                            ) {
+                                onViewOnboarding()
+                            }
+                            ListItemDivider()
+                            Text(
+                                text = stringResource(R.string.settings_about_star),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = contentColor,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        Misc.openUriSafely(
+                                            context,
+                                            "https://github.com/Aliothmoon/MAA-Meow"
+                                        )
+                                    }
+                                    .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+                                textAlign = TextAlign.Center
+                            )
                         }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_about_qq_group_title),
-                            description = stringResource(R.string.settings_about_qq_group_desc),
-                            contentColor = contentColor
-                        ) {
-                            achievementReporter.reportFeedbackGroupOpened()
-                            Misc.openUriSafely(context, "https://join.maameow.com/")
-                        }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_about_changelog),
-                            contentColor = contentColor
-                        ) {
-                            viewModel.onShowChangelog()
-                        }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_about_announcement),
-                            contentColor = contentColor
-                        ) {
-                            onViewAnnouncement()
-                        }
-                        ListItemDivider()
-                        SettingClickItem(
-                            title = stringResource(R.string.settings_about_onboarding),
-                            description = stringResource(R.string.settings_about_onboarding_desc),
-                            contentColor = contentColor
-                        ) {
-                            onViewOnboarding()
-                        }
-                        ListItemDivider()
-                        Text(
-                            text = stringResource(R.string.settings_about_star),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = contentColor,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    Misc.openUriSafely(
-                                        context,
-                                        "https://github.com/Aliothmoon/MAA-Meow"
-                                    )
-                                }
-                                .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-                            textAlign = TextAlign.Center
-                        )
                     }
                 }
-            }
 
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }

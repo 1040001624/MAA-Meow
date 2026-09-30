@@ -304,7 +304,7 @@ class BackgroundTaskViewModel(
     fun onScreenOff() {
         // 硬件熄屏：仅下发一次关闭物理屏幕的指令，无状态、幂等（再点必发，不会卡死）。
         // 启用该功能时 MainActivity 始终持有 FLAG_KEEP_SCREEN_ON 保持系统唤醒、不锁屏；
-        // 屏幕恢复由系统在用户唤醒时处理，会话结束/服务销毁时由 PowerController 兜底恢复。
+        // 屏幕恢复由系统在用户唤醒时处理，会话结束/服务销毁时由 PowerController 兜底恢复
         val service = RemoteServiceManager.getInstanceOrNull()
         if (service == null) {
             Timber.w("onScreenOff skipped: remote service unavailable")

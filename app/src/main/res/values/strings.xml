@@ -241,6 +241,20 @@
 
     <!-- settings: top-level -->
     <string name="settings_title">设置</string>
+    <string name="settings_search_hint">搜索设置</string>
+    <string name="settings_search_clear">清空搜索</string>
+    <string name="settings_search_empty">没有找到相关设置</string>
+    <string name="search_keywords_language">语言 中文 英文 English</string>
+    <string name="search_keywords_theme">主题 深色 夜间 暗色 黑色 莫奈 配色 颜色</string>
+    <string name="search_keywords_font_size">字体 字号 文字大小 缩放 放大</string>
+    <string name="search_keywords_backend">提权 Shizuku Root 权限</string>
+    <string name="search_keywords_data_location">数据目录 存储 路径 位置</string>
+    <string name="search_keywords_resolution">分辨率 虚拟屏 虚拟显示器 1080 720 画质</string>
+    <string name="search_keywords_pip">画中画 小窗 悬浮 PiP</string>
+    <string name="search_keywords_wake_unlock">锁屏 解锁 唤醒 密码 PIN 手势 定时</string>
+    <string name="search_keywords_mute">静音 声音 音量</string>
+    <string name="search_keywords_run_duration">时长 限时 超时 运行时间</string>
+    <string name="search_keywords_screen_off">熄屏 息屏 黑屏 关屏 锁屏 省电</string>
 
     <!-- settings: update section -->
     <string name="settings_section_update">更新管理</string>

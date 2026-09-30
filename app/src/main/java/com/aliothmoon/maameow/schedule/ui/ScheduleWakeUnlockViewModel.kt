@@ -13,37 +13,30 @@ import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
-/** 定时任务唤醒解锁：只有定时触发会用到，所以挂在定时任务页 */
 class ScheduleWakeUnlockViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val wakeUnlockEngine: WakeUnlockEngine,
     private val unlockGestureStore: UnlockGestureStore,
 ) : ViewModel() {
 
-    val wakeUnlockType: StateFlow<String> =
-        appSettingsManager.wakeUnlockType
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "swipe")
+    val wakeUnlockType: StateFlow<String> = appSettingsManager.wakeUnlockType
 
     fun setWakeUnlockType(type: String) {
         viewModelScope.launch { appSettingsManager.setWakeUnlockType(type) }
     }
 
-    val wakeCredential: StateFlow<String> =
-        appSettingsManager.wakeCredential
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val wakeCredential: StateFlow<String> = appSettingsManager.wakeCredential
 
     fun setWakeCredential(credential: String) {
         viewModelScope.launch { appSettingsManager.setWakeCredential(credential) }
     }
 
-    /** null=未测试，Testing=进行中，Done=已出结果 */
+    /** null=未测试 */
     sealed interface WakeTestState {
         data object Testing : WakeTestState
         data class Done(val result: WakeUnlockEngine.WakeResult) : WakeTestState
@@ -124,7 +117,7 @@ class ScheduleWakeUnlockViewModel(
         recordJob?.cancel()
         recordJob = viewModelScope.launch {
             wakeUnlockEngine.cancelGestureRecord()
-            // 远端取消后不会留下终态，界面直接收掉，别让用户以为按钮没反应
+            // 远端取消不留终态，本地直接收尾
             _gestureRecordState.value =
                 GestureRecordState.Failed(WakeUnlockEngine.WakeResult.RECORD_CANCELLED)
         }

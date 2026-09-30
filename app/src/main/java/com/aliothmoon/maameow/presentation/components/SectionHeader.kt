@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -52,6 +53,7 @@ fun CollapsibleSection(
     sectionKey: String = title,
     initiallyExpanded: Boolean = true,
     forceExpanded: Boolean = false,
+    revealToken: Any? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     CollapsibleSection(
@@ -59,6 +61,7 @@ fun CollapsibleSection(
         modifier = modifier,
         initiallyExpanded = initiallyExpanded,
         forceExpanded = forceExpanded,
+        revealToken = revealToken,
         title = {
             Text(
                 text = title,
@@ -76,6 +79,7 @@ fun CollapsibleSection(
  * 标题自定义版：折叠交互与无障碍语义共用，样式交给调用方
  *
  * @param forceExpanded 为 true 时强制展开（引导高亮分区内条目用），不覆盖用户自己的折叠选择
+ * @param revealToken 非空时展开一次，不锁定折叠
  */
 @Composable
 fun CollapsibleSection(
@@ -83,10 +87,14 @@ fun CollapsibleSection(
     modifier: Modifier = Modifier,
     initiallyExpanded: Boolean = true,
     forceExpanded: Boolean = false,
+    revealToken: Any? = null,
     title: @Composable RowScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     var userExpanded by rememberSaveable(sectionKey) { mutableStateOf(initiallyExpanded) }
+    if (revealToken != null) {
+        LaunchedEffect(revealToken) { userExpanded = true }
+    }
     val expanded = userExpanded || forceExpanded
     val expandLabel = stringResource(R.string.common_expand)
     val collapseLabel = stringResource(R.string.common_collapse)

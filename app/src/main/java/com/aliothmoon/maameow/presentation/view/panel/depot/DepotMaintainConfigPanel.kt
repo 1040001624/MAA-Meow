@@ -168,7 +168,13 @@ fun DepotMaintainConfigPanel(
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     // 用 selectable 而非 clickable，读屏才会播报选中态
-                    modifier = Modifier.selectable(selected = selected, role = Role.Tab) {
+                    // 同 PanelHeader 页签，不要涟漪
+                    modifier = Modifier.selectable(
+                        selected = selected,
+                        interactionSource = null,
+                        indication = null,
+                        role = Role.Tab,
+                    ) {
                         coroutineScope.launch { pagerState.animateScrollToPage(page) }
                     }
                 )

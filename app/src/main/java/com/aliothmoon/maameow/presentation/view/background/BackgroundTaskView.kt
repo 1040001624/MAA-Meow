@@ -86,6 +86,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -130,6 +131,8 @@ import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
+import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
+import com.aliothmoon.maameow.presentation.components.horizontalBleed
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
@@ -139,6 +142,10 @@ import com.aliothmoon.maameow.presentation.pip.LocalIsInPip
 import com.aliothmoon.maameow.presentation.pip.PipController
 import com.aliothmoon.maameow.presentation.pip.PipHost
 import com.aliothmoon.maameow.presentation.pip.PipRequest
+import com.aliothmoon.maameow.presentation.search.ProvideSettingSearch
+import com.aliothmoon.maameow.presentation.search.SettingLocation
+import com.aliothmoon.maameow.presentation.search.SettingSearchNavigator
+import com.aliothmoon.maameow.presentation.search.SettingSearchTarget
 import com.aliothmoon.maameow.presentation.state.PreviewPointerSlots
 import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
 import com.aliothmoon.maameow.presentation.view.panel.LocalToolboxFileExporter
@@ -222,6 +229,18 @@ fun BackgroundTaskView(
         if (onboardingOnThisPage && state.current != PanelTab.TASKS) {
             viewModel.onTabChange(PanelTab.TASKS)
         }
+    }
+
+    // 浮层只在任务类面板可开，先切过去再展开
+    val searchNavigator: SettingSearchNavigator = koinInject()
+    val pendingSearch by searchNavigator.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingSearch) {
+        val request = pendingSearch ?: return@LaunchedEffect
+        if (request.entry.location != SettingLocation.BackgroundActions || !request.isFresh()) {
+            return@LaunchedEffect
+        }
+        if (!PanelTab.canShowTaskActions(state.current)) viewModel.onTabChange(PanelTab.TASKS)
+        showMoreActions = true
     }
 
     val pagerState = rememberPagerState(
@@ -842,23 +861,25 @@ fun BackgroundTaskView(
         if (showMoreActions) {
             val isGameMuted by viewModel.isGameMuted.collectAsStateWithLifecycle()
             val runDeadline by compositionService.runDeadline.collectAsStateWithLifecycle()
-            BackgroundMoreActionsOverlay(
-                onDismissRequest = { showMoreActions = false },
-                isTaskActive = isTaskActive,
-                runDeadline = runDeadline,
-                isGameMuted = isGameMuted,
-                onToggleGameSound = viewModel::onToggleGameSound,
-                onScreenOff = viewModel::onScreenOff,
-                onShowScreenSaver = { coroutineScope.launch { screenSaverManager.show() } },
-                onCaptureScreenshot = viewModel::onCaptureDebugScreenshot,
-                onCloseApp = {
-                    if (maaState == MaaExecutionState.RUNNING) {
-                        showCloseConfirm = true
-                    } else {
-                        coroutineScope.launch { compositionService.stopVirtualDisplay() }
-                    }
-                },
-            )
+            ProvideSettingSearch(pendingSearch, searchNavigator) {
+                BackgroundMoreActionsOverlay(
+                    onDismissRequest = { showMoreActions = false },
+                    isTaskActive = isTaskActive,
+                    runDeadline = runDeadline,
+                    isGameMuted = isGameMuted,
+                    onToggleGameSound = viewModel::onToggleGameSound,
+                    onScreenOff = viewModel::onScreenOff,
+                    onShowScreenSaver = { coroutineScope.launch { screenSaverManager.show() } },
+                    onCaptureScreenshot = viewModel::onCaptureDebugScreenshot,
+                    onCloseApp = {
+                        if (maaState == MaaExecutionState.RUNNING) {
+                            showCloseConfirm = true
+                        } else {
+                            coroutineScope.launch { compositionService.stopVirtualDisplay() }
+                        }
+                    },
+                )
+            }
         }
 
         // 全屏预览
@@ -1104,153 +1125,165 @@ private fun BackgroundMoreActionsOverlay(
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
-            Column(modifier = Modifier.padding(10.dp)) {
-                // 标题与快速操作组
-                Text(
-                    text = stringResource(R.string.bg_actions_title),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    ActionTile(
-                        icon = Icons.Filled.PowerSettingsNew,
-                        label = stringResource(R.string.bg_action_screen_off),
-                        onClick = {
-                            if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
-                        },
-                        modifier = Modifier.weight(1f),
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onSurface
+            CompositionLocalProvider(LocalSettingRowBleed provides ActionsCardPadding) {
+                Column(modifier = Modifier.padding(ActionsCardPadding)) {
+                    // 标题与快速操作组
+                    Text(
+                        text = stringResource(R.string.bg_actions_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
                     )
-                    ActionTile(
-                        icon = Icons.AutoMirrored.Filled.ExitToApp,
-                        label = stringResource(R.string.bg_action_close_game),
-                        onClick = onCloseApp,
-                        modifier = Modifier.weight(1f),
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    ActionTile(
-                        icon = if (isGameMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                        label = if (isGameMuted) stringResource(R.string.bg_action_game_muted)
-                        else stringResource(R.string.bg_action_mute_game),
-                        onClick = {
-                            if (isGameMuted) onToggleGameSound() else pendingMuteAction = onToggleGameSound
-                        },
-                        modifier = Modifier.weight(1f),
-                        containerColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
-                        contentColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // 调试模式：截图按钮，保存到 {rootDir}/debug/screenshots
-                if (debugMode) {
-                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         ActionTile(
-                            icon = Icons.Filled.Screenshot,
-                            label = stringResource(R.string.bg_action_screenshot),
-                            onClick = onCaptureScreenshot,
+                            icon = Icons.Filled.PowerSettingsNew,
+                            label = stringResource(R.string.bg_action_screen_off),
+                            onClick = {
+                                if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
+                            },
                             modifier = Modifier.weight(1f),
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
+                        ActionTile(
+                            icon = Icons.AutoMirrored.Filled.ExitToApp,
+                            label = stringResource(R.string.bg_action_close_game),
+                            onClick = onCloseApp,
+                            modifier = Modifier.weight(1f),
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ActionTile(
+                            icon = if (isGameMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                            label = if (isGameMuted) stringResource(R.string.bg_action_game_muted)
+                            else stringResource(R.string.bg_action_mute_game),
+                            onClick = {
+                                if (isGameMuted) onToggleGameSound() else pendingMuteAction = onToggleGameSound
+                            },
+                            modifier = Modifier.weight(1f),
+                            containerColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
+                            contentColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    // 调试模式：截图按钮，保存到 {rootDir}/debug/screenshots
+                    if (debugMode) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            ActionTile(
+                                icon = Icons.Filled.Screenshot,
+                                label = stringResource(R.string.bg_action_screenshot),
+                                onClick = onCaptureScreenshot,
+                                modifier = Modifier.weight(1f),
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = stringResource(R.string.bg_auto_settings_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    SettingSearchTarget(R.string.bg_auto_mute_on_launch) {
+                        SettingSwitchRow(
+                            icon = Icons.Filled.NotificationsPaused,
+                            label = stringResource(R.string.bg_auto_mute_on_launch),
+                            checked = muteOnGameLaunch,
+                            onCheckedChange = { checked ->
+                                val apply = {
+                                    coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(checked) }
+                                    Unit
+                                }
+                                if (checked) pendingMuteAction = apply else apply()
+                            })
+                    }
+                    SettingSearchTarget(R.string.bg_auto_close_on_end) {
+                        SettingSwitchRow(
+                            icon = Icons.Filled.Cancel,
+                            label = stringResource(R.string.bg_auto_close_on_end),
+                            checked = closeAppOnTaskEnd,
+                            onCheckedChange = {
+                                coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
+                            })
+                    }
+                    // 本轮已按开始时的设置计时，运行中禁改
+                    SettingSearchTarget(R.string.bg_auto_run_duration_limit) {
+                        SettingSwitchRow(
+                            icon = Icons.Filled.Timer,
+                            label = stringResource(R.string.bg_auto_run_duration_limit),
+                            checked = runDurationLimitEnabled,
+                            enabled = !isTaskActive,
+                            onCheckedChange = {
+                                coroutineScope.launch { appSettingsManager.setRunDurationLimitEnabled(it) }
+                            })
+                    }
+                    if (runDeadline != null) {
+                        RunDurationRemainingRow(deadline = runDeadline)
+                    } else if (runDurationLimitEnabled) {
+                        RunDurationStepperRow(
+                            minutes = runDurationLimitMinutes,
+                            enabled = !isTaskActive,
+                            onMinutesChange = {
+                                coroutineScope.launch { appSettingsManager.setRunDurationLimitMinutes(it) }
+                            },
+                            onEditClick = { showRunDurationInput = true })
+                    }
+                    SettingSearchTarget(R.string.bg_auto_hardware_screen_off) {
+                        SettingSwitchRow(
+                            icon = Icons.Filled.StayCurrentPortrait,
+                            label = stringResource(R.string.bg_auto_hardware_screen_off),
+                            checked = useHardwareScreenOff,
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    showHardwareScreenOffConfirm = true
+                                } else {
+                                    coroutineScope.launch {
+                                        appSettingsManager.setUseHardwareScreenOff(
+                                            false
+                                        )
+                                    }
+                                }
+                            })
+                    }
+                    SettingSearchTarget(R.string.bg_auto_show_touch_preview) {
+                        SettingSwitchRow(
+                            icon = Icons.Filled.TouchApp,
+                            label = stringResource(R.string.bg_auto_show_touch_preview),
+                            checked = showTouchPreview,
+                            onCheckedChange = {
+                                coroutineScope.launch { appSettingsManager.setShowTouchPreview(it) }
+                            })
                     }
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = stringResource(R.string.bg_auto_settings_title),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                SettingSwitchRow(
-                    icon = Icons.Filled.NotificationsPaused,
-                    label = stringResource(R.string.bg_auto_mute_on_launch),
-                    checked = muteOnGameLaunch,
-                    onCheckedChange = { checked ->
-                        val apply = {
-                            coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(checked) }
-                            Unit
-                        }
-                        if (checked) pendingMuteAction = apply else apply()
-                    })
-                SettingSwitchRow(
-                    icon = Icons.Filled.Cancel,
-                    label = stringResource(R.string.bg_auto_close_on_end),
-                    checked = closeAppOnTaskEnd,
-                    onCheckedChange = {
-                        coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
-                    })
-                // 本轮已按开始时的设置计时，运行中禁改
-                SettingSwitchRow(
-                    icon = Icons.Filled.Timer,
-                    label = stringResource(R.string.bg_auto_run_duration_limit),
-                    checked = runDurationLimitEnabled,
-                    enabled = !isTaskActive,
-                    onCheckedChange = {
-                        coroutineScope.launch { appSettingsManager.setRunDurationLimitEnabled(it) }
-                    })
-                if (runDeadline != null) {
-                    RunDurationRemainingRow(deadline = runDeadline)
-                } else if (runDurationLimitEnabled) {
-                    RunDurationStepperRow(
-                        minutes = runDurationLimitMinutes,
-                        enabled = !isTaskActive,
-                        onMinutesChange = {
-                            coroutineScope.launch { appSettingsManager.setRunDurationLimitMinutes(it) }
-                        },
-                        onEditClick = { showRunDurationInput = true })
-                }
-                SettingSwitchRow(
-                    icon = Icons.Filled.StayCurrentPortrait,
-                    label = stringResource(R.string.bg_auto_hardware_screen_off),
-                    checked = useHardwareScreenOff,
-                    onCheckedChange = { checked ->
-                        if (checked) {
-                            showHardwareScreenOffConfirm = true
-                        } else {
-                            coroutineScope.launch {
-                                appSettingsManager.setUseHardwareScreenOff(
-                                    false
-                                )
-                            }
-                        }
-                    })
-                SettingSwitchRow(
-                    icon = Icons.Filled.TouchApp,
-                    label = stringResource(R.string.bg_auto_show_touch_preview),
-                    checked = showTouchPreview,
-                    onCheckedChange = {
-                        coroutineScope.launch { appSettingsManager.setShowTouchPreview(it) }
-                    })
             }
         }
     }
@@ -1354,11 +1387,14 @@ private fun SettingSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
 ) {
+    val bleed = LocalSettingRowBleed.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(32.dp)
-            .clickable(enabled = enabled) { onCheckedChange(!checked) },
+            .horizontalBleed(bleed)
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .padding(horizontal = bleed),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -1389,6 +1425,9 @@ private fun SettingSwitchRow(
     }
 }
 
+// 开关行按它外扩，涟漪铺满卡片
+private val ActionsCardPadding = 10.dp
+
 /** 与开关行文字对齐的缩进行 */
 @Composable
 private fun RunDurationSubRow(content: @Composable RowScope.() -> Unit) {
@@ -1413,6 +1452,7 @@ private fun RunDurationStepperRow(
         Row(
             modifier = Modifier
                 .weight(1f)
+                .clip(RoundedCornerShape(8.dp))
                 .clickable(
                     enabled = enabled,
                     onClickLabel = stringResource(R.string.bg_auto_run_duration_limit_edit),

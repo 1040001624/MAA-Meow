@@ -18,9 +18,7 @@ class ScheduleHealthLogicTest {
         exactAlarmAllowed: Boolean = true,
         overlayGranted: Boolean = true,
         overlayNeeded: Boolean = false,
-        deviceSecure: Boolean = false,
-        unlockCredentialReady: Boolean = true,
-        unlockNeeded: Boolean = false,
+        unlockCredentialMissing: Boolean = false,
     ) = ScheduleHealthSnapshot(
         backendGranted = backendGranted,
         batteryWhitelist = batteryWhitelist,
@@ -28,9 +26,7 @@ class ScheduleHealthLogicTest {
         exactAlarmAllowed = exactAlarmAllowed,
         overlayGranted = overlayGranted,
         overlayNeeded = overlayNeeded,
-        deviceSecure = deviceSecure,
-        unlockCredentialReady = unlockCredentialReady,
-        unlockNeeded = unlockNeeded,
+        unlockCredentialMissing = unlockCredentialMissing,
     )
 
     @Test
@@ -86,39 +82,27 @@ class ScheduleHealthLogicTest {
 
     // ===== 解锁凭证：安全锁屏 + 未配凭证 + 有启用策略 才提醒 =====
 
-    private fun unlockSnapshot(
-        deviceSecure: Boolean = true,
-        unlockCredentialReady: Boolean = false,
-        unlockNeeded: Boolean = true,
-    ) = snapshot(
-        deviceSecure = deviceSecure,
-        unlockCredentialReady = unlockCredentialReady,
-        unlockNeeded = unlockNeeded,
-    )
+    private val enabledStrategies = listOf(strategy(enabled = true, autoScreenSaver = false))
 
     @Test
-    fun `unlock - secure device without credential is flagged`() {
-        assertEquals(
-            listOf(ScheduleHealthIssue.UNLOCK_CREDENTIAL),
-            ScheduleHealthLogic.failingIssues(unlockSnapshot()),
-        )
+    fun `unlock - secure device without credential and with enabled strategy is missing`() {
+        assertTrue(ScheduleHealthLogic.unlockCredentialMissing(true, false, enabledStrategies))
     }
 
     @Test
-    fun `unlock - no reminder when not secure, credential ready, or no enabled strategy`() {
-        assertTrue(ScheduleHealthLogic.failingIssues(unlockSnapshot(deviceSecure = false)).isEmpty())
-        assertTrue(ScheduleHealthLogic.failingIssues(unlockSnapshot(unlockCredentialReady = true)).isEmpty())
-        assertTrue(ScheduleHealthLogic.failingIssues(unlockSnapshot(unlockNeeded = false)).isEmpty())
+    fun `unlock - not missing when not secure, credential ready, or no enabled strategy`() {
+        assertFalse(ScheduleHealthLogic.unlockCredentialMissing(false, false, enabledStrategies))
+        assertFalse(ScheduleHealthLogic.unlockCredentialMissing(true, true, enabledStrategies))
+        assertFalse(
+            ScheduleHealthLogic.unlockCredentialMissing(
+                true, false, listOf(strategy(enabled = false, autoScreenSaver = false)),
+            )
+        )
     }
 
     @Test
     fun `unlock - listed last and kept out of the wizard`() {
-        val snapshot = snapshot(
-            batteryWhitelist = false,
-            deviceSecure = true,
-            unlockCredentialReady = false,
-            unlockNeeded = true,
-        )
+        val snapshot = snapshot(batteryWhitelist = false, unlockCredentialMissing = true)
         assertEquals(
             listOf(ScheduleHealthIssue.BATTERY, ScheduleHealthIssue.UNLOCK_CREDENTIAL),
             ScheduleHealthLogic.failingIssues(snapshot),

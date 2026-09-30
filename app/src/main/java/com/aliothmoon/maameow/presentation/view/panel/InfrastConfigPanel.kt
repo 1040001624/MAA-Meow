@@ -436,9 +436,11 @@ private fun CustomInfrastSection(
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ), modifier = Modifier.clickable(
-                        enabled = !custom.description.isNullOrBlank()
-                    ) { descExpanded = !descExpanded }) {
+                    ), modifier = Modifier
+                        .clip(CardDefaults.shape)
+                        .clickable(
+                            enabled = !custom.description.isNullOrBlank()
+                        ) { descExpanded = !descExpanded }) {
                     Column(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)

@@ -46,6 +46,8 @@ import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.search.ProvideSettingSearch
+import com.aliothmoon.maameow.presentation.search.SettingSearchTarget
 import com.aliothmoon.maameow.presentation.view.settings.SettingSecretField
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -107,59 +109,63 @@ fun ScheduleWakeUnlockView(
     ) { paddingValues ->
         val contentColor = MaterialTheme.colorScheme.onSurface
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = paddingValues.calculateTopPadding()),
-            contentPadding = PaddingValues(
-                horizontal = MaaDesignTokens.Spacing.listHorizontal,
-                vertical = MaaDesignTokens.Spacing.sm,
-            ),
-        ) {
-            item {
-                Text(
-                    text = stringResource(R.string.schedule_wake_unlock_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm),
-                )
-                SettingsGroupCard {
-                    SettingWakeUnlockTypeItem(
-                        contentColor = contentColor,
-                        selectedType = wakeUnlockType,
-                        onTypeSelected = { viewModel.setWakeUnlockType(it) },
+        ProvideSettingSearch {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding()),
+                contentPadding = PaddingValues(
+                    horizontal = MaaDesignTokens.Spacing.listHorizontal,
+                    vertical = MaaDesignTokens.Spacing.sm,
+                ),
+            ) {
+                item {
+                    Text(
+                        text = stringResource(R.string.schedule_wake_unlock_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm),
                     )
-                    MaaAnimatedVisibility(
-                        visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_PIN,
-                        enter = expandVertically(),
-                        exit = shrinkVertically(),
-                    ) {
-                        Column {
-                            ListItemDivider()
-                            SettingWakePinSection(
+                    SettingsGroupCard {
+                        SettingSearchTarget(R.string.settings_wake_unlock_type) {
+                            SettingWakeUnlockTypeItem(
                                 contentColor = contentColor,
-                                wakeCredential = wakeCredential,
-                                onCredentialChange = { viewModel.setWakeCredential(it) },
-                                onTest = { viewModel.runWakeTest() },
+                                selectedType = wakeUnlockType,
+                                onTypeSelected = { viewModel.setWakeUnlockType(it) },
                             )
                         }
-                    }
-                    MaaAnimatedVisibility(
-                        visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_GESTURE,
-                        enter = expandVertically(),
-                        exit = shrinkVertically(),
-                    ) {
-                        Column {
-                            ListItemDivider()
-                            SettingWakeGestureSection(
-                                contentColor = contentColor,
-                                gesture = unlockGesture,
-                                recordState = gestureRecordState,
-                                onRecord = { viewModel.startGestureRecord() },
-                                onCancelRecord = { viewModel.cancelGestureRecord() },
-                                onClear = { viewModel.clearGesture() },
-                                onTest = { viewModel.runWakeTest() },
-                            )
+                        MaaAnimatedVisibility(
+                            visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_PIN,
+                            enter = expandVertically(),
+                            exit = shrinkVertically(),
+                        ) {
+                            Column {
+                                ListItemDivider()
+                                SettingWakePinSection(
+                                    contentColor = contentColor,
+                                    wakeCredential = wakeCredential,
+                                    onCredentialChange = { viewModel.setWakeCredential(it) },
+                                    onTest = { viewModel.runWakeTest() },
+                                )
+                            }
+                        }
+                        MaaAnimatedVisibility(
+                            visible = wakeUnlockType == AppSettingsManager.WAKE_TYPE_GESTURE,
+                            enter = expandVertically(),
+                            exit = shrinkVertically(),
+                        ) {
+                            Column {
+                                ListItemDivider()
+                                SettingWakeGestureSection(
+                                    contentColor = contentColor,
+                                    gesture = unlockGesture,
+                                    recordState = gestureRecordState,
+                                    onRecord = { viewModel.startGestureRecord() },
+                                    onCancelRecord = { viewModel.cancelGestureRecord() },
+                                    onClear = { viewModel.clearGesture() },
+                                    onTest = { viewModel.runWakeTest() },
+                                )
+                            }
                         }
                     }
                 }

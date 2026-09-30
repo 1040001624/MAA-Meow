@@ -35,5 +35,11 @@ sealed interface UnlockCredential {
             TYPE_GESTURE -> if (gestureJson.isBlank()) Swipe else Gesture(gestureJson)
             else -> Swipe
         }
+
+        /** 只问有没有录手势，不必序列化内容 */
+        fun isReady(type: String, pin: String, hasGesture: Boolean): Boolean =
+            of(type, pin, if (hasGesture) GESTURE_PLACEHOLDER else "").isReady
+
+        private const val GESTURE_PLACEHOLDER = "{}"
     }
 }

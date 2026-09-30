@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -259,9 +258,8 @@ private fun SummaryCard(
         ?: stringResource(R.string.schedule_result_in_progress)
 
     ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(

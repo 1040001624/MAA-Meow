@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.background
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -58,10 +57,10 @@ fun VirtualDisplayPreview(
         }
 
         Card(
+            onClick = onClick,
             modifier = Modifier
                 .width(cardWidth)
-                .height(cardHeight)
-                .clickable(onClick = onClick),
+                .height(cardHeight),
             shape = MaterialTheme.shapes.medium,
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {

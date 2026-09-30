@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,11 +58,15 @@ fun SelectableCardButton(
         else -> MaterialTheme.colorScheme.onSurface
     }
 
+    val shape = RoundedCornerShape(6.dp)
     Surface(
-        shape = RoundedCornerShape(6.dp),
+        shape = shape,
         color = container,
         border = BorderStroke(width = 1.dp, color = border),
-        modifier = modifier.then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+        // Surface 的 shape 不裁 modifier 上的涟漪；不用 Surface(onClick)，它会撑到 48dp
+        modifier = modifier
+            .clip(shape)
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
         // 撑满外部给的 minHeight 并居中，牛杂那组卡片要等高
         Box(contentAlignment = Alignment.Center) {

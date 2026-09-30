@@ -389,6 +389,7 @@ private fun DontShowAgainToggle(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
                 .toggleable(
                     value = checked,
                     enabled = enabled,

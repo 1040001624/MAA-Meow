@@ -41,15 +41,18 @@ data class ScheduleHealthSnapshot(
     val overlayGranted: Boolean,
     /** 任一启用策略勾选了屏保选项 */
     val overlayNeeded: Boolean,
-    /** 设备设了 PIN/图案/密码锁屏 */
-    val deviceSecure: Boolean,
-    /** 当前解锁方式的凭证已配好，同 [com.aliothmoon.maameow.domain.models.UnlockCredential.isReady] */
-    val unlockCredentialReady: Boolean,
-    /** 存在启用的策略；没有策略时不提醒 */
-    val unlockNeeded: Boolean,
+    /** 见 [ScheduleHealthLogic.unlockCredentialMissing]；向导不收这项 */
+    val unlockCredentialMissing: Boolean = false,
 )
 
 object ScheduleHealthLogic {
+
+    /** 安全锁屏 + 凭证没配 + 有启用策略 */
+    fun unlockCredentialMissing(
+        deviceSecure: Boolean,
+        credentialReady: Boolean,
+        strategies: List<ScheduleStrategy>,
+    ): Boolean = deviceSecure && !credentialReady && strategies.any { it.enabled }
 
     /** 是否需要悬浮窗：存在启用且勾选屏保的策略 */
     fun overlayNeeded(strategies: List<ScheduleStrategy>): Boolean =
@@ -62,9 +65,7 @@ object ScheduleHealthLogic {
         if (!snapshot.exactAlarmAllowed) add(ScheduleHealthIssue.EXACT_ALARM)
         if (!snapshot.notification) add(ScheduleHealthIssue.NOTIFICATION)
         if (snapshot.overlayNeeded && !snapshot.overlayGranted) add(ScheduleHealthIssue.OVERLAY)
-        if (snapshot.unlockNeeded && snapshot.deviceSecure && !snapshot.unlockCredentialReady) {
-            add(ScheduleHealthIssue.UNLOCK_CREDENTIAL)
-        }
+        if (snapshot.unlockCredentialMissing) add(ScheduleHealthIssue.UNLOCK_CREDENTIAL)
     }
 
     /** 后端授权、解锁凭证都当场处理不完，留给健康卡 */
