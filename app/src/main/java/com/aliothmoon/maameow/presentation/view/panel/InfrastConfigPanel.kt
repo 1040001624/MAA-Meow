@@ -112,7 +112,7 @@ fun InfrastConfigPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(0)
                     }
@@ -122,7 +122,7 @@ fun InfrastConfigPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(1)
                     }
@@ -485,7 +485,7 @@ private fun CustomInfrastSection(
             text = stringResource(R.string.panel_infrast_scheduler_builder),
             style = MaterialTheme.typography.bodySmall.copy(
                 textDecoration = TextDecoration.Underline
-            ), color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable {
+            ), color = MaterialTheme.colorScheme.primary, modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable {
                 Misc.openUriSafely(context, MaaApi.BASE_SCHEDULING_SCHEMA)
             })
 
@@ -557,7 +557,7 @@ private fun PresetButtonGroup(
         UiUsageConstants.defaultInfrastPresets.forEach { key ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onPresetSelected(key) }) {
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onPresetSelected(key) }) {
                 RadioButton(
                     selected = selectedPreset == key,
                     onClick = { onPresetSelected(key) },
@@ -670,7 +670,7 @@ private fun PlanSelectButtonGroup(
         if (hasPeriodicPlan) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onPlanSelected(-1) }) {
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onPlanSelected(-1) }) {
                 RadioButton(
                     selected = selectedPlanIndex == -1,
                     onClick = { onPlanSelected(-1) },
@@ -701,7 +701,7 @@ private fun PlanSelectButtonGroup(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onPlanSelected(index) }) {
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onPlanSelected(index) }) {
                 RadioButton(
                     selected = selectedPlanIndex == index,
                     onClick = { onPlanSelected(index) },
@@ -818,6 +818,7 @@ private fun UsesOfDronesSection(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .widthIn(min = 80.dp)
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { onConfigChange(config.copy(usesOfDrones = value)) }) {
                     RadioButton(
                         selected = config.usesOfDrones == value,

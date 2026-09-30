@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -94,7 +95,7 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch { pagerState.animateScrollToPage(0) }
                 }
             )
@@ -103,7 +104,7 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch { pagerState.animateScrollToPage(1) }
                 }
             )
@@ -276,6 +277,7 @@ private fun FormationSelector(selectedFormation: Int, onFormationChange: (Int) -
             MallConfig.FORMATION_OPTIONS.forEach { (value, label) ->
                 Row(
                     modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { onFormationChange(value) }
                         .background(
                             if (selectedFormation == value) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,

@@ -167,7 +167,7 @@ fun CoreCharSelector(
                 RainbowFlowText(
                     text = stringResource(R.string.panel_roguelike_theme_tip_recommended),
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.clickable { tipExpanded = !tipExpanded }
+                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable { tipExpanded = !tipExpanded }
                 )
             }
             ExpandableTipContent(visible = tipExpanded, tipText = themeTip)

@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -64,6 +65,7 @@ fun ToolboxPanel(
                     modifier = Modifier
                         .weight(1f)
                         .height(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { viewModel.onTabChange(tab) }
                 ) {
                     // Box 铺满 Surface，文字水平+垂直居中

@@ -35,6 +35,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +70,7 @@ fun TaskListPanel(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(4.dp))
                 .clickable { onToggleProfileMode() },
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
@@ -112,6 +114,7 @@ fun TaskListPanel(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(4.dp))
                 .clickable { onToggleEditMode() },
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
@@ -154,6 +157,7 @@ fun TaskListPanel(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
                         .clickable { onToggleAddingTask() },
                     shape = RoundedCornerShape(4.dp),
                     colors = CardDefaults.cardColors(

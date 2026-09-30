@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.components.tip
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -12,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.components.iconClickable
 
 @Composable
 fun ExpandableTipIcon(
@@ -26,7 +26,7 @@ fun ExpandableTipIcon(
             tint = if (expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .size(16.dp)
-                .clickable { onExpandedChange(!expanded) }
+                .iconClickable { onExpandedChange(!expanded) }
         )
     }
 }

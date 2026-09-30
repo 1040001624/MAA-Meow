@@ -73,6 +73,7 @@ import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
 import com.aliothmoon.maameow.data.model.update.UpdateInfo
 import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.model.update.UpdateSource
+import com.aliothmoon.maameow.presentation.components.iconClickable
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.Misc
@@ -842,7 +843,7 @@ private fun UpdateSourceButtonGroup(
                     modifier = Modifier
                         .padding(start = 2.dp)
                         .size(16.dp)
-                        .clickable { onInfoClick(source) },
+                        .iconClickable { onInfoClick(source) },
                     tint = MaterialTheme.colorScheme.primary
                 )
             }

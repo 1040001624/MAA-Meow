@@ -101,12 +101,14 @@ import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.CollapsibleSection
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
+import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
 import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.components.horizontalBleed
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 import com.aliothmoon.maameow.presentation.navigation.MainTabNavigator
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
@@ -1185,6 +1187,7 @@ fun SettingsView(
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .horizontalBleed(LocalSettingRowBleed.current)
                                     .clickable {
                                         Misc.openUriSafely(
                                             context,

@@ -68,6 +68,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -206,6 +207,7 @@ fun AutoBattlePanel(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 36.dp)
+                            .clip(RoundedCornerShape(8.dp))
                             .clickable { expanded = !expanded }
                     ) {
                         Row(
@@ -436,7 +438,7 @@ fun AutoBattlePanel(
                                     listOf(1, 2, 3, 4).forEach { index ->
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.clickable {
+                                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable {
                                                 viewModel.onConfigChanged(
                                                     state.config.copy(
                                                         formationIndex = index
@@ -486,7 +488,7 @@ fun AutoBattlePanel(
                                     ).forEach { (value, label) ->
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.clickable {
+                                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable {
                                                 viewModel.onConfigChanged(
                                                     state.config.copy(
                                                         supportUnitUsage = value
@@ -737,6 +739,7 @@ private fun CopilotTabGrid(
                             modifier = Modifier
                                 .weight(1f)
                                 .heightIn(min = 36.dp)
+                                .clip(RoundedCornerShape(8.dp))
                                 .clickable { onSelect(spec.index) }
                         ) {
                             Box(
@@ -979,7 +982,7 @@ private fun CopilotDetailCard(
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { expanded = !expanded }
+                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable { expanded = !expanded }
                     )
                 }
             }

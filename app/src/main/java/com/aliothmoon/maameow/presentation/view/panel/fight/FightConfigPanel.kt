@@ -39,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -120,7 +121,7 @@ fun FightConfigPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(0)
                     }
@@ -131,7 +132,7 @@ fun FightConfigPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(1)
                     }
@@ -436,6 +437,7 @@ private fun SeriesSection(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .width(72.dp)
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { onConfigChange(config.copy(series = value)) }
                 ) {
                     RadioButton(
@@ -489,6 +491,7 @@ private fun StageResetModeSection(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .width(100.dp)
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { onConfigChange(config.copy(stageResetMode = mode)) }
                 ) {
                     RadioButton(
@@ -795,6 +798,7 @@ private fun CustomAnnihilationSection(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
                                 .clickable { onConfigChange(config.copy(annihilationStage = value)) }
                         ) {
                             RadioButton(

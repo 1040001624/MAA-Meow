@@ -330,7 +330,7 @@ private fun LogDetailDialog(
                             text = path,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { /* TODO: 打开图片 */ }
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable { /* TODO: 打开图片 */ }
                         )
                     }
                 }

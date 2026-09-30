@@ -63,7 +63,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch { pagerState.animateScrollToPage(0) }
                 }
             )
@@ -72,7 +72,7 @@ fun ReclamationConfigPanel(config: ReclamationConfig, onConfigChange: (Reclamati
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch { pagerState.animateScrollToPage(1) }
                 }
             )

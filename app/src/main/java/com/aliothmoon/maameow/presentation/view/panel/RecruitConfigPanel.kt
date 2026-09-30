@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -90,7 +91,7 @@ fun RecruitConfigPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(0)
                     }
@@ -101,7 +102,7 @@ fun RecruitConfigPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(interactionSource = null, indication = null) {
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(1)
                     }
@@ -285,6 +286,7 @@ private fun SelectExtraTagsSection(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { onConfigChange(config.copy(selectExtraTags = value)) }
                 ) {
                     RadioButton(
