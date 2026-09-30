@@ -31,16 +31,22 @@ fun RainbowFlowText(
     textAlign: TextAlign? = null,
     maxLines: Int = Int.MAX_VALUE,
 ) {
-    val transition = rememberInfiniteTransition(label = "rainbowFlow")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4_000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "rainbowPhase",
-    )
+    // 常驻但不在屏上时停住，否则整页按帧率持续重绘
+    val phase = if (LocalPageVisible.current.value) {
+        val transition = rememberInfiniteTransition(label = "rainbowFlow")
+        val animated by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 4_000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "rainbowPhase",
+        )
+        animated
+    } else {
+        0f
+    }
 
     // 渐变跨度略大于常见标题宽，配合 phase 形成流光
     val span = 320f

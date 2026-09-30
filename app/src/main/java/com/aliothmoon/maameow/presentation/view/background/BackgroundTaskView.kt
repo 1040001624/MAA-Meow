@@ -128,11 +128,14 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
 import com.aliothmoon.maameow.presentation.components.horizontalBleed
+import com.aliothmoon.maameow.presentation.components.rememberPageVisible
+import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
 import com.aliothmoon.maameow.presentation.onboarding.LocalOnboardingState
 import com.aliothmoon.maameow.presentation.onboarding.OnboardingTarget
@@ -499,6 +502,9 @@ fun BackgroundTaskView(
                             .fillMaxWidth()
                             .weight(1f)
                     ) {
+                        val retainedPages = rememberStagedBeyondViewportCount(
+                            pagerState, PanelTab.entries.size - 1,
+                        )
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier
@@ -506,60 +512,63 @@ fun BackgroundTaskView(
                                 .weight(1f)
                                 .onboardingTarget(OnboardingTarget.BG_TASK_LIST),
                             userScrollEnabled = true,
-                            beyondViewportPageCount = 0
+                            // 分帧常驻四页：切页不再在动画首帧现组合整页
+                            beyondViewportPageCount = retainedPages
                         ) { page ->
-                            when (page) {
-                                0 -> {
-                                    TaskListDetailLayout(
-                                        nodes = nodes,
-                                        selectedNode = selectedNode,
-                                        selectedNodeId = state.selectedNodeId,
-                                        isEditMode = state.isEditMode,
-                                        isAddingTask = state.isAddingTask,
-                                        isProfileMode = state.isProfileMode,
-                                        profiles = profiles,
-                                        activeProfileId = profileId,
-                                        clientType = clientType,
-                                        onNodeEnabledChange = viewModel::onNodeEnabledChange,
-                                        onNodeSelected = viewModel::onNodeSelected,
-                                        onNodeMove = viewModel::onNodeMove,
-                                        onToggleEditMode = viewModel::onToggleEditMode,
-                                        onToggleAddingTask = viewModel::onToggleAddingTask,
-                                        onToggleProfileMode = viewModel::onToggleProfileMode,
-                                        onConfigChange = { config ->
-                                            val nodeId = selectedNode?.id
-                                                ?: return@TaskListDetailLayout
-                                            viewModel.onNodeConfigChange(nodeId, config)
-                                        },
-                                        onAddNode = viewModel::onAddNode,
-                                        onRemoveNode = viewModel::onRemoveNode,
-                                        onDuplicateNode = viewModel::onDuplicateNode,
-                                        onRenameNode = viewModel::onRenameNode,
-                                        onSwitchProfile = viewModel::onSwitchProfile,
-                                        onRenameProfile = viewModel::onRenameProfile,
-                                        onDuplicateProfile = viewModel::onDuplicateProfile,
-                                        onDeleteProfile = viewModel::onDeleteProfile,
-                                        onCreateProfile = viewModel::onCreateProfile,
-                                        onReorderProfile = viewModel::onReorderProfile,
-                                        modifier = Modifier.fillMaxSize(),
-                                        wrapDetailInCard = true,
-                                    )
-                                }
+                            CompositionLocalProvider(LocalPageVisible provides rememberPageVisible(pagerState, page)) {
+                                when (page) {
+                                    0 -> {
+                                        TaskListDetailLayout(
+                                            nodes = nodes,
+                                            selectedNode = selectedNode,
+                                            selectedNodeId = state.selectedNodeId,
+                                            isEditMode = state.isEditMode,
+                                            isAddingTask = state.isAddingTask,
+                                            isProfileMode = state.isProfileMode,
+                                            profiles = profiles,
+                                            activeProfileId = profileId,
+                                            clientType = clientType,
+                                            onNodeEnabledChange = viewModel::onNodeEnabledChange,
+                                            onNodeSelected = viewModel::onNodeSelected,
+                                            onNodeMove = viewModel::onNodeMove,
+                                            onToggleEditMode = viewModel::onToggleEditMode,
+                                            onToggleAddingTask = viewModel::onToggleAddingTask,
+                                            onToggleProfileMode = viewModel::onToggleProfileMode,
+                                            onConfigChange = { config ->
+                                                val nodeId = selectedNode?.id
+                                                    ?: return@TaskListDetailLayout
+                                                viewModel.onNodeConfigChange(nodeId, config)
+                                            },
+                                            onAddNode = viewModel::onAddNode,
+                                            onRemoveNode = viewModel::onRemoveNode,
+                                            onDuplicateNode = viewModel::onDuplicateNode,
+                                            onRenameNode = viewModel::onRenameNode,
+                                            onSwitchProfile = viewModel::onSwitchProfile,
+                                            onRenameProfile = viewModel::onRenameProfile,
+                                            onDuplicateProfile = viewModel::onDuplicateProfile,
+                                            onDeleteProfile = viewModel::onDeleteProfile,
+                                            onCreateProfile = viewModel::onCreateProfile,
+                                            onReorderProfile = viewModel::onReorderProfile,
+                                            modifier = Modifier.fillMaxSize(),
+                                            wrapDetailInCard = true,
+                                        )
+                                    }
 
-                                1 -> AutoBattlePanel(modifier = Modifier.fillMaxSize())
-                                2 -> CompositionLocalProvider(
-                                    LocalToolboxFileExporter provides rememberSafToolboxFileExporter()
-                                ) {
-                                    ToolboxPanel(modifier = Modifier.fillMaxSize())
-                                }
+                                    1 -> AutoBattlePanel(modifier = Modifier.fillMaxSize())
+                                    2 -> CompositionLocalProvider(
+                                        LocalToolboxFileExporter provides rememberSafToolboxFileExporter()
+                                    ) {
+                                        ToolboxPanel(modifier = Modifier.fillMaxSize())
+                                    }
 
-                                3 -> {
-                                    val runtimeLogs by viewModel.logs.collectAsStateWithLifecycle()
-                                    LogPanel(
-                                        logs = runtimeLogs,
-                                        onClearLogs = { viewModel.onClearLogs() },
-                                        onExportLogs = { showLogExportSheet = true },
-                                    )
+                                    3 -> {
+                                        val runtimeLogs by viewModel.logs.collectAsStateWithLifecycle()
+                                        LogPanel(
+                                            logs = runtimeLogs,
+                                            onClearLogs = { viewModel.onClearLogs() },
+                                            onExportLogs = { showLogExportSheet = true },
+                                        )
+                                    }
                                 }
                             }
                         }
