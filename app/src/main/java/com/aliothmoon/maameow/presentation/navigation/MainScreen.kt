@@ -28,6 +28,9 @@ import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleListView
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaMotion
+import com.aliothmoon.maameow.theme.PagerPageSpacing
+import com.aliothmoon.maameow.theme.rememberMaaPagerFling
+import com.aliothmoon.maameow.theme.rememberOuterPagerNestedScroll
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import kotlin.math.abs
@@ -132,11 +135,15 @@ fun MainScreen(
                         alpha = if (visible) 1f else 0f
                     },
             ) {
+                val pagerFling = rememberMaaPagerFling(pagerState)
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     key = { BottomNavTab.all[it].route },
                     userScrollEnabled = visible && !chromeHidden,
+                    pageSpacing = PagerPageSpacing,
+                    flingBehavior = pagerFling,
+                    pageNestedScrollConnection = rememberOuterPagerNestedScroll(pagerState, pagerFling),
                 ) { page ->
                     when (BottomNavTab.all[page]) {
                         BottomNavTab.HOME -> HomeView(navController = navController)

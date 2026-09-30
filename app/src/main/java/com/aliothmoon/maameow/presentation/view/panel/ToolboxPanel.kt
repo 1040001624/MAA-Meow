@@ -38,6 +38,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.ToolboxTab
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaMotion
+import com.aliothmoon.maameow.theme.PagerPageSpacing
 import org.koin.compose.koinInject
 import kotlin.math.abs
 
@@ -129,6 +130,7 @@ fun ToolboxPanel(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             userScrollEnabled = false,
+            pageSpacing = PagerPageSpacing,
             beyondViewportPageCount = retainedPages,
             key = { visibleTabs[it] },
         ) { page ->

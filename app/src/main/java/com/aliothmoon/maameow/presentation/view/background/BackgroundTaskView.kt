@@ -166,6 +166,8 @@ import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.theme.LocalReduceMotion
 import com.aliothmoon.maameow.theme.MaaMotion
 import com.aliothmoon.maameow.theme.MaaThemeAlphas
+import com.aliothmoon.maameow.theme.PagerPageSpacing
+import com.aliothmoon.maameow.theme.rememberMaaPagerFling
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -512,6 +514,8 @@ fun BackgroundTaskView(
                                 .weight(1f)
                                 .onboardingTarget(OnboardingTarget.BG_TASK_LIST),
                             userScrollEnabled = true,
+                            flingBehavior = rememberMaaPagerFling(pagerState),
+                            pageSpacing = PagerPageSpacing,
                             // 分帧常驻四页：切页不再在动画首帧现组合整页
                             beyondViewportPageCount = retainedPages
                         ) { page ->

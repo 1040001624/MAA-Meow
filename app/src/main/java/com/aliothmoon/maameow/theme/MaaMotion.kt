@@ -9,7 +9,9 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -19,13 +21,23 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.TargetedFlingBehavior
+import androidx.compose.foundation.pager.PagerDefaults
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 
 /**
  * App 动效语言：短、先快后稳、展开用纵向、换页用共享轴
@@ -122,6 +134,56 @@ object MaaMotion {
 }
 
 val LocalReduceMotion = staticCompositionLocalOf { false }
+
+/** 分页之间留缝，滑动时两页不连成一片 */
+val PagerPageSpacing = 12.dp
+
+/**
+ * 分页吸附：拖过 35% 即翻页，落位带一点回弹
+ *
+ * 默认要过半屏且无回弹，翻页显得不果断
+ */
+@Composable
+fun rememberMaaPagerFling(state: PagerState): TargetedFlingBehavior {
+    val reduceMotion = LocalReduceMotion.current
+    return PagerDefaults.flingBehavior(
+        state = state,
+        snapPositionalThreshold = 0.35f,
+        snapAnimationSpec = if (reduceMotion) {
+            snap()
+        } else {
+            spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
+        },
+    )
+}
+
+/**
+ * 外层分页嵌着同向内层分页时用
+ *
+ * 默认实现把甩动速度留给内层吃掉，外层只能按位置回弹，容易停在半截
+ * 外层已被拖离整页时，改由外层接住速度翻页
+ */
+@Composable
+fun rememberOuterPagerNestedScroll(
+    state: PagerState,
+    fling: TargetedFlingBehavior,
+): NestedScrollConnection {
+    val default = PagerDefaults.pageNestedScrollConnection(state, Orientation.Horizontal)
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    return remember(default, state, fling, rtl) {
+        object : NestedScrollConnection by default {
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (available.x == 0f || abs(state.currentPageOffsetFraction) < 1e-3f) {
+                    return Velocity.Zero
+                }
+                // 手指右移是往前翻，与分页滚动方向相反
+                val velocity = if (rtl) available.x else -available.x
+                state.scroll { with(fling) { performFling(velocity) } }
+                return available.copy(y = 0f)
+            }
+        }
+    }
+}
 
 @Composable
 fun rememberReduceMotion(): Boolean {
