@@ -20,6 +20,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 
 class AssetExtractor(private val context: Context) {
@@ -27,6 +28,7 @@ class AssetExtractor(private val context: Context) {
     companion object {
         private const val MANIFEST_FILE_NAME = "MaaSync/asset_manifest.json"
         val PERMIT = Runtime.getRuntime().availableProcessors()
+        private const val PROGRESS_INTERVAL_MS = 100L
     }
 
     class ExtractFailedException(
@@ -82,6 +84,7 @@ class AssetExtractor(private val context: Context) {
         return try {
             val startTime = System.currentTimeMillis()
             val extractedCount = AtomicInteger(0)
+            val lastReportTime = AtomicLong(0)
             val semaphore = Semaphore(PERMIT)
 
             val manifest = loadAssetManifest()
@@ -112,7 +115,14 @@ class AssetExtractor(private val context: Context) {
                                         }
                                     }
                                     val count = extractedCount.incrementAndGet()
-                                    onProgress(ExtractProgress(count, totalFiles, relativePath))
+                                    // 逐文件回调会让界面每帧重组，限到 100ms 一次
+                                    val now = System.currentTimeMillis()
+                                    val last = lastReportTime.get()
+                                    if (count == totalFiles ||
+                                        (now - last >= PROGRESS_INTERVAL_MS && lastReportTime.compareAndSet(last, now))
+                                    ) {
+                                        onProgress(ExtractProgress(extractedCount.get(), totalFiles, relativePath))
+                                    }
                                 } catch (e: Exception) {
                                     Timber.e(e, "文件复制最终失败: $assetPath")
                                     throw ExtractFailedException(assetPath, 3, e)

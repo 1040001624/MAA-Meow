@@ -65,6 +65,8 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.theme.ScreenSaverDimens
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -74,8 +76,10 @@ fun ScreenSaverView(
     sessionLogger: MaaSessionLogger,
     onUnlock: () -> Unit
 ) {
-    val logs by sessionLogger.logs.collectAsStateWithLifecycle()
-    val latestLog = logs.lastOrNull()?.content ?: stringResource(R.string.screensaver_waiting_task)
+    val lastContent by remember(sessionLogger) {
+        sessionLogger.logs.map { it.lastOrNull()?.content }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(sessionLogger.logs.value.lastOrNull()?.content)
+    val latestLog = lastContent ?: stringResource(R.string.screensaver_waiting_task)
 
     val batteryState = rememberBatteryState()
     var currentTime by remember { mutableStateOf(LocalTime.now()) }

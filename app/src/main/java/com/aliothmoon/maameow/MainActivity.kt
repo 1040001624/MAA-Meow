@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -82,8 +83,10 @@ class MainActivity : AppCompatActivity(), PipHost {
         val splash = installSplashScreen()
         splash.setKeepOnScreenCondition { !isUiReady }
         super.onCreate(savedInstanceState)
-        val eyeProtection = EyeProtectionDetector.detect(this)
-        Timber.i("isEyeProtectionEnabled: %s (source=%s)", eyeProtection.isEnabled, eyeProtection.source)
+        lifecycleScope.launch(Dispatchers.IO) {
+            val eyeProtection = EyeProtectionDetector.detect(this@MainActivity)
+            Timber.i("isEyeProtectionEnabled: %s (source=%s)", eyeProtection.isEnabled, eyeProtection.source)
+        }
         launchDispatched = savedInstanceState?.getBoolean(STATE_LAUNCH_DISPATCHED) ?: false
         if (!launchDispatched) dispatchScheduledLaunchIntent(intent)
         enableEdgeToEdge()
@@ -95,7 +98,8 @@ class MainActivity : AppCompatActivity(), PipHost {
     }
 
     private fun initializeUi() {
-        lifecycleScope.launch {
+        // 定义表构建与匹配不占首帧
+        lifecycleScope.launch(Dispatchers.Default) {
             achievementRepository.report {
                 event = AchievementEvents.APP_LAUNCH
             }

@@ -152,8 +152,9 @@ class MaaPathConfig(
         }
     }
 
-    val appVersionCode: Long
-        get() = context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
+    val appVersionCode: Long by lazy {
+        context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
+    }
 
     fun markAppVersion() {
         File(rootDir, APP_VERSION_FILE).writeText(appVersionCode.toString())

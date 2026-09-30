@@ -14,7 +14,6 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
-import com.aliothmoon.maameow.domain.service.update.UpdateService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.SwitchCoreDataLocationUseCase
 import com.aliothmoon.maameow.manager.PermissionManager
@@ -48,7 +47,6 @@ class HomeViewModel(
     private val application: Context,
     private val appSettingsManager: AppSettingsManager,
     private val overlayController: OverlayController,
-    private val updateService: UpdateService,
     private val permissionManager: PermissionManager,
     private val resourceLoader: MaaResourceLoader,
     private val compositionService: MaaCompositionService,
@@ -89,22 +87,12 @@ class HomeViewModel(
     }
 
     init {
-        observeResourceUpdateState()
         observeServiceStatus()
         observeResourceInitState()
         observeRunMode()
         observeFloatWindowMode()
         observeIsGranting()
         observeOverlayActive()
-    }
-
-    private fun observeResourceUpdateState() {
-        viewModelScope.launch {
-            updateService.resourceProcessState.collect { state ->
-                Timber.i("ResourceUpdateState collect $state")
-                _uiState.update { it.copy(resourceUpdateState = state) }
-            }
-        }
     }
 
     private fun observeServiceStatus() {

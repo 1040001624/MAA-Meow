@@ -38,8 +38,11 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
+import com.aliothmoon.maameow.presentation.components.collectWhilePageVisible
+import com.aliothmoon.maameow.presentation.components.rememberPageVisible
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.ERROR
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.SUCCESS
@@ -197,8 +200,10 @@ fun ExpandedControlPanel(
                             }
                         }
 
-                        3 -> { // PanelTab.LOG
-                            val runtimeLogs by viewModel.runtimeLogs.collectAsStateWithLifecycle()
+                        3 -> CompositionLocalProvider( // PanelTab.LOG
+                            LocalPageVisible provides rememberPageVisible(pagerState, page)
+                        ) {
+                            val runtimeLogs by viewModel.runtimeLogs.collectWhilePageVisible()
                             LogPanel(
                                 logs = runtimeLogs,
                                 onClearLogs = { viewModel.onClearLogs() },

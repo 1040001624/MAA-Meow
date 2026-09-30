@@ -531,6 +531,8 @@ class TaskChainState(
         val current = _chain.value.toMutableList()
         val ret = block(current)
         reindex(current)
+        // 没改动就不写盘，滑块、输入框会反复提交同值
+        if (others == null && current == _chain.value) return ret
         val snapshot = current.toList()
         _chain.value = snapshot
         _profiles.value = _profiles.value.map { p ->
@@ -546,7 +548,7 @@ class TaskChainState(
 
     private fun reindex(nodes: MutableList<TaskChainNode>) {
         for (i in nodes.indices) {
-            nodes[i] = nodes[i].copy(order = i)
+            if (nodes[i].order != i) nodes[i] = nodes[i].copy(order = i)
         }
     }
 

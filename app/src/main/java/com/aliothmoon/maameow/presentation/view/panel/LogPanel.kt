@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,10 +76,14 @@ fun LogPanel(
     var isAutoScroll by remember { mutableStateOf(true) }
     var selectedLog by remember { mutableStateOf<LogItem?>(null) }
 
-    LaunchedEffect(logs.size, isAutoScroll) {
+    // 日志满上限后条数不再变，按末条 id 触发
+    LaunchedEffect(logs.lastOrNull()?.id, isAutoScroll) {
         if (isAutoScroll && logs.isNotEmpty()) {
-            listState.scrollToItem(logs.size - 1)
+            listState.scrollToItem(logs.lastIndex)
         }
+    }
+    val showResumeButton by remember {
+        derivedStateOf { !isAutoScroll && listState.canScrollForward }
     }
 
     LaunchedEffect(listState.isScrollInProgress) {
@@ -147,7 +152,7 @@ fun LogPanel(
                 }
             }
 
-            if (listState.canScrollForward && logs.isNotEmpty()) {
+            if (showResumeButton && logs.isNotEmpty()) {
                 IconButton(
                     onClick = { isAutoScroll = true },
                     modifier = Modifier

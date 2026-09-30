@@ -34,7 +34,7 @@ class ResourceInitService(
             return
         }
 
-        if (pathConfig.isResourceReady) {
+        if (withContext(Dispatchers.IO) { pathConfig.isResourceReady }) {
             _state.value = ResourceInitState.Ready
             return
         }

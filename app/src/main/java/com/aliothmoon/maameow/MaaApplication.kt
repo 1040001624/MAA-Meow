@@ -18,10 +18,8 @@ import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.utils.CrashHandler
-import com.aliothmoon.maameow.utils.EyeProtectionDetector
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
-import timber.log.Timber
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,8 +64,6 @@ class MaaApplication : Application() {
         // 不等设置读盘，冷启动 receiver / FGS 的日志与崩溃才接得住
         treeHolder.setup()
         crashHandler.init(this)
-        val eyeProtection = EyeProtectionDetector.detect(this)
-        Timber.i("isEyeProtectionEnabled: %s (source=%s)", eyeProtection.isEnabled, eyeProtection.source)
 
         applicationScope.launch(Dispatchers.Main) {
             appSettingsManager.awaitLoaded()

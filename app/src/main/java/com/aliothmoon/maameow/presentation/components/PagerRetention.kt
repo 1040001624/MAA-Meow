@@ -12,7 +12,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 
 /**
@@ -31,6 +34,14 @@ fun rememberPageVisible(pagerState: PagerState, page: Int): State<Boolean> {
     return remember(pagerState, page, parent) {
         derivedStateOf { parent.value && (page == pagerState.currentPage || page == pagerState.targetPage) }
     }
+}
+
+/** 所在页不可见时停在最后一次的值，常驻页不再跟着高频数据重组 */
+@Composable
+fun <T> StateFlow<T>.collectWhilePageVisible(): State<T> {
+    val visible by LocalPageVisible.current
+    val source = remember(this, visible) { if (visible) this else emptyFlow() }
+    return source.collectAsStateWithLifecycle(value)
 }
 
 // 等首屏与转场结束再补组合

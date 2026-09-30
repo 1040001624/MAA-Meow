@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -121,7 +122,7 @@ fun HomeView(
     val appVersion = updateViewModel.currentAppVersion
 
     val context = LocalContext.current
-    val (width, height) = Misc.getScreenSize(context)
+    val (width, height) = remember(LocalConfiguration.current) { Misc.getScreenSize(context) }
     val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
 
     val startupDialog by updateViewModel.startupUpdateDialog.collectAsStateWithLifecycle()

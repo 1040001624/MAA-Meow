@@ -131,6 +131,7 @@ import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
+import com.aliothmoon.maameow.presentation.components.collectWhilePageVisible
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
 import com.aliothmoon.maameow.presentation.components.horizontalBleed
@@ -566,7 +567,7 @@ fun BackgroundTaskView(
                                     }
 
                                     3 -> {
-                                        val runtimeLogs by viewModel.logs.collectAsStateWithLifecycle()
+                                        val runtimeLogs by viewModel.logs.collectWhilePageVisible()
                                         LogPanel(
                                             logs = runtimeLogs,
                                             onClearLogs = { viewModel.onClearLogs() },

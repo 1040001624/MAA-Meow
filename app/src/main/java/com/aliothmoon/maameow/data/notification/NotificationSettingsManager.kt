@@ -11,10 +11,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.runBlocking
 
 class NotificationSettingsManager(private val context: Context) {
 
@@ -27,7 +25,8 @@ class NotificationSettingsManager(private val context: Context) {
     val settings: Flow<NotificationSettings> =
         with(NotificationSettingsSchema) { context.notificationDataStore.flow }
 
-    private val initialSettings: NotificationSettings = runBlocking { settings.first() }
+    // 不在主线程阻塞读盘；读到之前渠道列表为空，不会误推
+    private val initialSettings = NotificationSettings()
 
     suspend fun updateSettings(new: NotificationSettings) {
         with(NotificationSettingsSchema) { context.notificationDataStore.update(new) }

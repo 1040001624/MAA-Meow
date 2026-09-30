@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -843,6 +844,8 @@ private fun DormThresholdSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
+    // 拖动时只改本地值，松手再提交，免得每帧都写盘
+    var dragValue by remember(config.dormThreshold) { mutableFloatStateOf(config.dormThreshold.toFloat()) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -862,7 +865,7 @@ private fun DormThresholdSection(
                     expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
             }
             Text(
-                text = "${config.dormThreshold}%",
+                text = "${dragValue.toInt()}%",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -875,8 +878,9 @@ private fun DormThresholdSection(
         )
 
         Slider(
-            value = config.dormThreshold.toFloat(),
-            onValueChange = { onConfigChange(config.copy(dormThreshold = it.toInt())) },
+            value = dragValue,
+            onValueChange = { dragValue = it },
+            onValueChangeFinished = { onConfigChange(config.copy(dormThreshold = dragValue.toInt())) },
             valueRange = 0f..100f,
             modifier = Modifier.fillMaxWidth()
         )
