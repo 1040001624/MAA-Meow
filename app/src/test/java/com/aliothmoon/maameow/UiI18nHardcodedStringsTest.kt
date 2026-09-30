@@ -96,7 +96,7 @@ class UiI18nHardcodedStringsTest {
                     "[CoreCharSelector] 空字符串，设置 isValid=true",
                     "[CoreCharSelector] 更新配置为空字符串",
                     "[CoreCharSelector] 开始校验: '${'$'}newValue'",
-                    "[CoreCharSelector] 开始校验: isValidCharacterName",
+                    "[CoreCharSelector] 开始校验: isValidOperatorName",
                     "[CoreCharSelector] 校验结果: validationResult=${'$'}validationResult, newValue='${'$'}newValue'",
                     "[CoreCharSelector] 建议列表计算完成: ${'$'}{newSuggestions.size} 个结果",
                     "[CoreCharSelector] 输入已变化，跳过此次校验结果: 当前='${'$'}inputText', 校验='${'$'}newValue'",
