@@ -26,6 +26,8 @@ class ItemIconLoader(
 
     private val missing = ConcurrentHashMap.newKeySet<String>()
 
+    fun peek(itemId: String): ImageBitmap? = cache.get(itemId)
+
     suspend fun load(itemId: String): ImageBitmap? {
         cache.get(itemId)?.let { return it }
         if (itemId in missing) return null
@@ -78,6 +80,8 @@ class ItemIconLoader(
             }
 
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+            // 提前上传纹理
+            bitmap.prepareToDraw()
 
             bitmap.asImageBitmap()
         } catch (e: Exception) {

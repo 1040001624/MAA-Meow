@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -83,6 +84,10 @@ fun DepotRecognitionPanel(
             clipboard.setClipEntry(entry)
         }
         Toast.makeText(context, toast, Toast.LENGTH_SHORT).show()
+    }
+
+    LaunchedEffect(items) {
+        items.forEach { iconLoader.load(it.id) }
     }
 
     if (items.isEmpty() && snapshot.syncTimeMillis <= 0L) {
@@ -268,8 +273,9 @@ private fun HintRow(text: String) {
 
 @Composable
 private fun rememberItemIcon(itemId: String, loader: ItemIconLoader): State<ImageBitmap?> {
-    return produceState(initialValue = null, itemId) {
-        value = loader.load(itemId)
+    // 首帧直接用缓存，免得滚回来先空一帧
+    return produceState(initialValue = loader.peek(itemId), itemId) {
+        if (value == null) value = loader.load(itemId)
     }
 }
 
