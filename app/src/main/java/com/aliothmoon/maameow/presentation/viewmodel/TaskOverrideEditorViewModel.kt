@@ -10,15 +10,19 @@ import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextDynamicOr
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+@OptIn(FlowPreview::class)
 class TaskOverrideEditorViewModel(
     private val pathConfig: MaaPathConfig,
     private val resourceLoader: MaaResourceLoader,
@@ -32,10 +36,16 @@ class TaskOverrideEditorViewModel(
     }
 
     private val _editorText = MutableStateFlow("{}")
-    val editorText: StateFlow<String> = _editorText.asStateFlow()
 
+    /** 读盘结果，只用于给编辑器灌一次初值；之后以编辑器自身为准 */
+    private val _loadedText = MutableStateFlow<String?>(null)
+    val loadedText: StateFlow<String?> = _loadedText.asStateFlow()
+
+    // 整篇校验放到后台且停手后再做，别卡输入
     val isJsonValid: StateFlow<Boolean> = _editorText
+        .debounce(VALIDATE_DEBOUNCE_MS)
         .map { JSON.isValid(it) }
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
@@ -50,6 +60,7 @@ class TaskOverrideEditorViewModel(
                 "{}"
             }
             _editorText.value = text
+            _loadedText.value = text
         }
     }
 
@@ -88,5 +99,9 @@ class TaskOverrideEditorViewModel(
 
     fun clearSaveState() {
         _saveState.value = SaveState.Idle
+    }
+
+    private companion object {
+        const val VALIDATE_DEBOUNCE_MS = 300L
     }
 }

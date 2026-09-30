@@ -104,7 +104,7 @@ fun TaskOverrideEditorView(
     navController: NavController,
     viewModel: TaskOverrideEditorViewModel = koinViewModel(),
 ) {
-    val editorText by viewModel.editorText.collectAsStateWithLifecycle()
+    val loadedText by viewModel.loadedText.collectAsStateWithLifecycle()
     val isJsonValid by viewModel.isJsonValid.collectAsStateWithLifecycle()
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -117,6 +117,17 @@ fun TaskOverrideEditorView(
 
     LaunchedEffect(Unit) {
         viewModel.load()
+    }
+    LaunchedEffect(editorRef, loadedText) {
+        val editor = editorRef ?: return@LaunchedEffect
+        val text = loadedText ?: return@LaunchedEffect
+        if (editor.text.toString() != text) editor.setText(text)
+    }
+    // 配色只随深浅色切换重建，不跟着每次按键走
+    LaunchedEffect(editorRef, isDark) {
+        val editor = editorRef ?: return@LaunchedEffect
+        ensureTextMateInitialized(editor.context, isDark)
+        editor.colorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance())
     }
     val msg = stringResource(R.string.editor_save_success)
     LaunchedEffect(saveState) {
@@ -181,15 +192,7 @@ fun TaskOverrideEditorView(
                         }
                     }
                 },
-                update = { editor ->
-                    ensureTextMateInitialized(editor.context, isDark)
-                    editor.colorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance())
-                    val current = editor.text.toString()
-                    if (editorText != current) {
-                        editor.setText(editorText)
-                    }
-                    editorRef = editor
-                },
+                update = { editor -> editorRef = editor },
                 onRelease = { it.release() },
                 modifier = Modifier
                     .weight(1f)

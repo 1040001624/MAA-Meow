@@ -8,7 +8,6 @@ import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalConfiguration
@@ -45,7 +44,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -92,7 +90,6 @@ class MainActivity : AppCompatActivity(), PipHost {
         enableEdgeToEdge()
         lifecycleScope.launch {
             (application as MaaApplication).awaitReady()
-            delegate.localNightMode = appSettingsManager.themeMode.value.toAppCompatNightMode()
             initializeUi()
         }
     }
@@ -106,7 +103,6 @@ class MainActivity : AppCompatActivity(), PipHost {
         }
         doObserveKeepScreenOn()
         doObserveScreenSaverBars()
-        doObserveThemeMode()
         window.decorView.viewTreeObserver.addOnPreDrawListener(object :
             ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
@@ -239,25 +235,5 @@ class MainActivity : AppCompatActivity(), PipHost {
 
     override fun onDestroy() {
         super.onDestroy()
-    }
-
-    private fun doObserveThemeMode() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                appSettingsManager.themeMode.drop(1).collect { mode ->
-                    val target = mode.toAppCompatNightMode()
-                    if (delegate.localNightMode != target) {
-                        delegate.localNightMode = target
-                    }
-                }
-            }
-        }
-    }
-
-    private fun AppSettingsManager.ThemeMode.toAppCompatNightMode(): Int = when (this) {
-        AppSettingsManager.ThemeMode.SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        AppSettingsManager.ThemeMode.WHITE -> AppCompatDelegate.MODE_NIGHT_NO
-        AppSettingsManager.ThemeMode.DARK,
-        AppSettingsManager.ThemeMode.PURE_DARK -> AppCompatDelegate.MODE_NIGHT_YES
     }
 }

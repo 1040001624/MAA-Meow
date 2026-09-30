@@ -90,7 +90,6 @@ private data class ResolvedStageNavigation(
 
 data class CopilotUiState(
     val tabIndex: Int = TAB_MAIN,
-    val inputText: String = "",
     val currentCopilot: CopilotTaskData? = null,
     val currentTaskType: MaaTaskType = MaaTaskType.COPILOT,
     val copilotId: Int = 0,
@@ -140,6 +139,10 @@ class CopilotViewModel(
 
     private val _state = MutableStateFlow(CopilotUiState())
     val state: StateFlow<CopilotUiState> = _state.asStateFlow()
+
+    // 逐字变化，单独成流免得整个面板跟着重组
+    private val _inputText = MutableStateFlow("")
+    val inputText: StateFlow<String> = _inputText.asStateFlow()
 
     private val _dialog = MutableStateFlow<PanelDialogUiState?>(null)
     val dialog: StateFlow<PanelDialogUiState?> = _dialog.asStateFlow()
@@ -221,7 +224,7 @@ class CopilotViewModel(
     }
 
     fun onInputChanged(text: String) {
-        _state.update { it.copy(inputText = text) }
+        _inputText.value = text
     }
 
     fun onPasteAndParse() {
@@ -392,7 +395,7 @@ class CopilotViewModel(
     }
 
     private fun parseInput() {
-        val input = _state.value.inputText.trim()
+        val input = _inputText.value.trim()
         if (input.isEmpty()) return
 
         viewModelScope.launch {

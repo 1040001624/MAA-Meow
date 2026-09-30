@@ -139,7 +139,8 @@ class ScreenSaverOverlayManager(
             WindowManager.LayoutParams.MATCH_PARENT,
             type,
             flags,
-            PixelFormat.TRANSLUCENT
+            // 整屏纯黑，不透明省掉与下层的混合
+            PixelFormat.OPAQUE
         ).apply {
             gravity = Gravity.CENTER
             screenBrightness = 0.01f // 设置屏幕亮度极暗以省电和防烧屏

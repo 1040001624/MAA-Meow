@@ -109,10 +109,15 @@ class TaskChainState(
 
     private suspend fun doConsume() {
         var pendingError: IOException? = null
-        for (op in persistOps) {
+        var carried: PersistOp? = null
+        while (true) {
+            val op = carried ?: persistOps.receiveCatching().getOrNull() ?: break
+            carried = null
             try {
                 when (op) {
                     PersistOp.Sync -> {
+                        // sync 写的是当下全量快照，排队中的连续 Sync 一次写完
+                        carried = skipQueuedSyncs()
                         try {
                             sync()
                             pendingError = null
@@ -140,6 +145,14 @@ class TaskChainState(
                     pendingError = e
                 }
             }
+        }
+    }
+
+    /** 取走队首连续的 Sync，返回之后第一个别的操作 */
+    private fun skipQueuedSyncs(): PersistOp? {
+        while (true) {
+            val next = persistOps.tryReceive().getOrNull() ?: return null
+            if (next !is PersistOp.Sync) return next
         }
     }
 

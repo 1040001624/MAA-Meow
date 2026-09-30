@@ -7,11 +7,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -50,6 +46,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -101,6 +100,7 @@ fun ScreenSaverView(
     val barDriftDownPx = with(density) { 40.dp.roundToPx() }
     var barOffsetX by remember { mutableIntStateOf(0) }
     var barOffsetY by remember { mutableIntStateOf(0) }
+    var shimmerWake by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -117,6 +117,16 @@ fun ScreenSaverView(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .pointerInput(Unit) {
+                // 只观察不消费，拖动解锁照常
+                awaitPointerEventScope {
+                    while (true) {
+                        if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Press) {
+                            shimmerWake++
+                        }
+                    }
+                }
+            }
     ) {
         Column(
             modifier = Modifier
@@ -158,6 +168,7 @@ fun ScreenSaverView(
                 .padding(bottom = 56.dp)
                 .padding(horizontal = 32.dp)
                 .fillMaxWidth(),
+            shimmerWake = shimmerWake,
             onUnlock = onUnlock
         )
     }
@@ -166,6 +177,7 @@ fun ScreenSaverView(
 @Composable
 private fun SlideToUnlockBar(
     modifier: Modifier = Modifier,
+    shimmerWake: Int,
     onUnlock: () -> Unit
 ) {
     val density = LocalDensity.current
@@ -187,16 +199,14 @@ private fun SlideToUnlockBar(
     val displayOffset = if (isAnimating) springAnim.value else dragOffset
     val progress = if (maxOffset > 0f) (displayOffset / maxOffset).coerceIn(0f, 1f) else 0f
 
-    val shimmerTransition = rememberInfiniteTransition(label = "shimmer")
-    val shimmerPos by shimmerTransition.animateFloat(
-        initialValue = -0.5f,
-        targetValue = 1.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerPos"
-    )
+    // 屏保常亮且一挂几小时，光带不能一直出帧：显示和触摸后扫几遍就停在条外
+    val shimmerPos = remember { Animatable(SHIMMER_END) }
+    LaunchedEffect(shimmerWake) {
+        repeat(SHIMMER_SWEEPS) {
+            shimmerPos.snapTo(SHIMMER_START)
+            shimmerPos.animateTo(SHIMMER_END, tween(2400, easing = LinearEasing))
+        }
+    }
     val shimmerAlpha = (1f - progress) * 0.28f
 
     Box(
@@ -214,8 +224,8 @@ private fun SlideToUnlockBar(
                             Color.White.copy(alpha = shimmerAlpha),
                             Color.Transparent
                         ),
-                        startX = shimmerPos * size.width - sweepWidth,
-                        endX = shimmerPos * size.width + sweepWidth
+                        startX = shimmerPos.value * size.width - sweepWidth,
+                        endX = shimmerPos.value * size.width + sweepWidth
                     )
                 )
             }
@@ -325,3 +335,7 @@ fun rememberBatteryState(): BatteryState {
     }
     return state
 }
+
+private const val SHIMMER_START = -0.5f
+private const val SHIMMER_END = 1.5f
+private const val SHIMMER_SWEEPS = 3

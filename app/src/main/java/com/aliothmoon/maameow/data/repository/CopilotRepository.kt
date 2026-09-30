@@ -5,6 +5,8 @@ import com.aliothmoon.maameow.data.model.CopilotConfig
 import com.aliothmoon.maameow.data.model.copilot.CopilotListItem
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
@@ -25,6 +27,17 @@ class CopilotRepository(
 
     private val taskListFile: File by lazy { File(copilotDir, TASK_LIST_FILE) }
     private val configFile: File by lazy { File(copilotDir, CONFIG_FILE) }
+
+    // 输入框逐字保存会并发写同一文件，串成按调用顺序、整文件替换
+    private val writeLock = Mutex()
+
+    private suspend fun writeReplacing(file: File, text: String) = writeLock.withLock {
+        withContext(Dispatchers.IO) {
+            val tmp = File(file.parentFile, "${file.name}.tmp")
+            tmp.writeText(text, Charsets.UTF_8)
+            check(tmp.renameTo(file)) { "重命名 ${tmp.name} 失败" }
+        }
+    }
 
     /**
      * 保存 copilot JSON 到文件
@@ -113,9 +126,9 @@ class CopilotRepository(
         }.getOrDefault(emptyList())
     }
 
-    suspend fun saveTaskList(items: List<CopilotListItem>) = withContext(Dispatchers.IO) {
+    suspend fun saveTaskList(items: List<CopilotListItem>) {
         runCatching {
-            taskListFile.writeText(JsonUtils.common.encodeToString(items), Charsets.UTF_8)
+            writeReplacing(taskListFile, JsonUtils.common.encodeToString(items))
         }.onFailure {
             Timber.e(it, "$TAG: 保存战斗列表失败")
         }
@@ -132,9 +145,9 @@ class CopilotRepository(
         }.getOrNull()
     }
 
-    suspend fun saveConfig(config: CopilotConfig) = withContext(Dispatchers.IO) {
+    suspend fun saveConfig(config: CopilotConfig) {
         runCatching {
-            configFile.writeText(JsonUtils.common.encodeToString(config), Charsets.UTF_8)
+            writeReplacing(configFile, JsonUtils.common.encodeToString(config))
         }.onFailure {
             Timber.e(it, "$TAG: 保存自动战斗配置失败")
         }

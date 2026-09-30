@@ -6,6 +6,7 @@ import com.aliothmoon.maameow.data.datasource.AppDownloader
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
+import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
@@ -18,6 +19,7 @@ import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.utils.CrashHandler
+import com.aliothmoon.maameow.utils.NightModeBootstrap
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import kotlinx.coroutines.CompletableDeferred
@@ -27,6 +29,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -64,10 +67,14 @@ class MaaApplication : Application() {
         // 不等设置读盘，冷启动 receiver / FGS 的日志与崩溃才接得住
         treeHolder.setup()
         crashHandler.init(this)
+        NightModeBootstrap.applyCached(this)
 
         applicationScope.launch(Dispatchers.Main) {
             appSettingsManager.awaitLoaded()
             LocaleBootstrap.applyPersisted(appSettingsManager)
+            NightModeBootstrap.follow(app, applicationScope, appSettingsManager)
+            // 背景图解码与后续初始化并行，首帧就能带上
+            if (appSettingsManager.customBackgroundEnabled.value) get<BackgroundImageStore>()
             postCreateApplication()
             initialization.complete(Unit)
         }.invokeOnCompletion { cause ->

@@ -254,8 +254,9 @@ fun AutoBattlePanel(
                 }
             }
             item {
+                val inputText by viewModel.inputText.collectAsStateWithLifecycle()
                 ITextField(
-                    value = state.inputText,
+                    value = inputText,
                     onValueChange = viewModel::onInputChanged,
                     label = stringResource(R.string.panel_autobattle_station_code_label),
                     placeholder = stringResource(R.string.panel_autobattle_station_code_placeholder),
