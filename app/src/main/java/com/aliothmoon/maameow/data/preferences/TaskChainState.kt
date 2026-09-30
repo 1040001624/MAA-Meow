@@ -554,7 +554,7 @@ class TaskChainState(
         return TaskTypeInfo.entries.filter { it.inDefaultChain }.mapIndexed { index, info ->
             TaskChainNode(
                 name = defaultTaskName(info),
-                enabled = false,
+                enabled = info.enabledByDefault,
                 order = index,
                 config = info.defaultConfig()
             )
