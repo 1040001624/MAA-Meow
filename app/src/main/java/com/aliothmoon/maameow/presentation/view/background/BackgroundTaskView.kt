@@ -505,6 +505,33 @@ fun BackgroundTaskView(
                             .fillMaxWidth()
                             .weight(1f)
                     ) {
+                        val inputFocusManager = LocalInputFocusManager.current
+                        // 启动按钮的两种「禁用态」：① 前台模式不从后台任务页启动；
+                        // ② 远程后端（Shizuku/Root）不可用。两者均显示为禁用态但仍可点击，
+                        // 点击给出对应提示（防呆），与领域层 checkPreconditions 守卫一致。
+                        val foregroundBlocked = runMode == RunMode.FOREGROUND
+                        val backendBlocked =
+                            !permissionState.isStartupBackendAvailable(permissionState.startupBackend)
+                        val startBlocked = foregroundBlocked || backendBlocked
+                        val switchBackgroundModeMessage =
+                            stringResource(R.string.navigation_toast_switch_background_mode)
+                        val backendUnavailableMessage = stringResource(
+                            R.string.home_toast_backend_unavailable,
+                            permissionState.startupBackend.display
+                        )
+                        // 所有启动入口共用，新入口别绕开
+                        val guardedStart: (() -> Unit) -> Unit = { start ->
+                            inputFocusManager.clear()
+                            when {
+                                foregroundBlocked ->
+                                    Toast.makeText(context, switchBackgroundModeMessage, Toast.LENGTH_SHORT).show()
+
+                                backendBlocked ->
+                                    Toast.makeText(context, backendUnavailableMessage, Toast.LENGTH_SHORT).show()
+
+                                else -> start()
+                            }
+                        }
                         val retainedPages = rememberStagedBeyondViewportCount(
                             pagerState, PanelTab.entries.size - 1,
                         )
@@ -548,7 +575,9 @@ fun BackgroundTaskView(
                                             onRemoveNode = viewModel::onRemoveNode,
                                             onDuplicateNode = viewModel::onDuplicateNode,
                                             onRenameNode = viewModel::onRenameNode,
-                                            onRunFromNode = viewModel::onStartTasksFrom,
+                                            onRunFromNode = { nodeId ->
+                                                guardedStart { viewModel.onStartTasksFrom(nodeId) }
+                                            },
                                             canRunFromNode = !isTaskActive,
                                             onSwitchProfile = viewModel::onSwitchProfile,
                                             onRenameProfile = viewModel::onRenameProfile,
@@ -582,7 +611,6 @@ fun BackgroundTaskView(
 
                         if (canShowTaskActions) {
                             Spacer(modifier = Modifier.height(6.dp))
-                            val inputFocusManager = LocalInputFocusManager.current
                             val toolboxTab by toolboxViewModel.currentTab.collectAsStateWithLifecycle()
                             val gachaDisclaimerOk by
                             toolboxViewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
@@ -594,19 +622,6 @@ fun BackgroundTaskView(
                             val hideStartBarForGachaDisclaimer = state.current == PanelTab.TOOLS &&
                                     toolboxTab == ToolboxTab.GACHA &&
                                     !gachaDisclaimerOk
-                            // 启动按钮的两种「禁用态」：① 前台模式不从后台任务页启动；
-                            // ② 远程后端（Shizuku/Root）不可用。两者均显示为禁用态但仍可点击，
-                            // 点击给出对应提示（防呆），与领域层 checkPreconditions 守卫一致。
-                            val foregroundBlocked = runMode == RunMode.FOREGROUND
-                            val backendBlocked =
-                                !permissionState.isStartupBackendAvailable(permissionState.startupBackend)
-                            val startBlocked = foregroundBlocked || backendBlocked
-                            val switchBackgroundModeMessage =
-                                stringResource(R.string.navigation_toast_switch_background_mode)
-                            val backendUnavailableMessage = stringResource(
-                                R.string.home_toast_backend_unavailable,
-                                permissionState.startupBackend.display
-                            )
                             if (!hideStartBarForGachaDisclaimer) {
                                 Row(
                                     modifier = Modifier
@@ -645,24 +660,9 @@ fun BackgroundTaskView(
                                         } else {
                                             Button(
                                                 onClick = {
-                                                    inputFocusManager.clear()
-                                                    if (foregroundBlocked) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            switchBackgroundModeMessage,
-                                                            Toast.LENGTH_SHORT,
-                                                        ).show()
-                                                        return@Button
+                                                    guardedStart {
+                                                        toolboxViewModel.onStartGacha(once = true)
                                                     }
-                                                    if (backendBlocked) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            backendUnavailableMessage,
-                                                            Toast.LENGTH_SHORT,
-                                                        ).show()
-                                                        return@Button
-                                                    }
-                                                    toolboxViewModel.onStartGacha(once = true)
                                                 },
                                                 enabled = !isTaskActive,
                                                 colors = if (startBlocked) {
@@ -695,24 +695,9 @@ fun BackgroundTaskView(
                                             }
                                             OutlinedButton(
                                                 onClick = {
-                                                    inputFocusManager.clear()
-                                                    if (foregroundBlocked) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            switchBackgroundModeMessage,
-                                                            Toast.LENGTH_SHORT,
-                                                        ).show()
-                                                        return@OutlinedButton
+                                                    guardedStart {
+                                                        toolboxViewModel.onStartGacha(once = false)
                                                     }
-                                                    if (backendBlocked) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            backendUnavailableMessage,
-                                                            Toast.LENGTH_SHORT,
-                                                        ).show()
-                                                        return@OutlinedButton
-                                                    }
-                                                    toolboxViewModel.onStartGacha(once = false)
                                                 },
                                                 enabled = !isTaskActive,
                                                 modifier = Modifier.weight(1f),
@@ -762,28 +747,13 @@ fun BackgroundTaskView(
                                         } else {
                                             Button(
                                                 onClick = {
-                                                    inputFocusManager.clear()
-                                                    if (foregroundBlocked) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            switchBackgroundModeMessage,
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                        return@Button
-                                                    }
-                                                    if (backendBlocked) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            backendUnavailableMessage,
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                        return@Button
-                                                    }
-                                                    when (state.current) {
-                                                        PanelTab.TASKS -> viewModel.onStartTasks()
-                                                        PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
-                                                        PanelTab.TOOLS -> toolboxViewModel.onStart()
-                                                        else -> {}
+                                                    guardedStart {
+                                                        when (state.current) {
+                                                            PanelTab.TASKS -> viewModel.onStartTasks()
+                                                            PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
+                                                            PanelTab.TOOLS -> toolboxViewModel.onStart()
+                                                            else -> {}
+                                                        }
                                                     }
                                                 },
                                                 enabled = !isTaskActive,
