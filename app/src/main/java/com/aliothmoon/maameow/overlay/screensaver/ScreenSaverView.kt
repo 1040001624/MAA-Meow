@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,8 +65,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.theme.ScreenSaverDimens
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -76,9 +75,8 @@ fun ScreenSaverView(
     onUnlock: () -> Unit,
     onBrightnessChange: (Float) -> Unit = {},
 ) {
-    val lastContent by remember(sessionLogger) {
-        sessionLogger.logs.map { it.lastOrNull()?.content }.distinctUntilChanged()
-    }.collectAsStateWithLifecycle(sessionLogger.logs.value.lastOrNull()?.content)
+    val logs = sessionLogger.logs.collectAsStateWithLifecycle()
+    val lastContent by remember(logs) { derivedStateOf { logs.value.lastOrNull()?.content } }
     val latestLog = lastContent ?: stringResource(R.string.screensaver_waiting_task)
 
     val batteryState = rememberBatteryState()

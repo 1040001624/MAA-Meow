@@ -41,7 +41,8 @@ fun rememberPageVisible(pagerState: PagerState, page: Int): State<Boolean> {
 fun <T> StateFlow<T>.collectWhilePageVisible(): State<T> {
     val visible by LocalPageVisible.current
     val source = remember(this, visible) { if (visible) this else emptyFlow() }
-    return source.collectAsStateWithLifecycle(value)
+    val initial = remember { value }
+    return source.collectAsStateWithLifecycle(initial)
 }
 
 // 等首屏与转场结束再补组合
