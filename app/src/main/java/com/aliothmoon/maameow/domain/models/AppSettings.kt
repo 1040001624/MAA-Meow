@@ -230,6 +230,14 @@ data class AppSettings(
     @PrefKey(default = "false")
     val operBoxUseYituliuApi: String = "false",
 
+    /** 牛杂活动商店黑名单：勾选的常用商品物品 id，逗号分隔 */
+    @PrefKey(default = "")
+    val eventShopBlacklistPresets: String = "",
+
+    /** 牛杂活动商店黑名单：自定义商品关键词，分号分隔 */
+    @PrefKey(default = "")
+    val eventShopBlacklistCustom: String = "",
+
     /** 喝醉过但还没醒酒，下次启动提示 */
     @PrefKey(default = "false")
     val pallasHangover: String = "false",

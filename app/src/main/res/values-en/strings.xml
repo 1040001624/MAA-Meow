@@ -1158,6 +1158,13 @@
     <string name="panel_mini_game_name">Mini Game Name</string>
     <string name="panel_mini_game_ending">Ending</string>
     <string name="panel_mini_game_use_normal_token">Use regular tokens when Kernel Tokens run out</string>
+    <string name="panel_mini_game_event_shop_blacklist">Item blacklist (checked or listed items are not bought)</string>
+    <string name="panel_mini_game_event_shop_data_supplement_instrument">Data Supplement Instrument</string>
+    <string name="panel_mini_game_event_shop_data_supplement_stick">Data Supplement Stick</string>
+    <string name="panel_mini_game_event_shop_lmd">LMD</string>
+    <string name="panel_mini_game_event_shop_furniture_part">Furniture Part</string>
+    <string name="panel_mini_game_event_shop_custom">Other items</string>
+    <string name="panel_mini_game_event_shop_custom_hint">Substrings of item names, separated by semicolons</string>
     <string name="panel_mini_game_preferred_events">Priority for Series of Events</string>
 
     <!-- mini game: data texts (names / tips, mirrors MaaWpfGui localization keys) -->

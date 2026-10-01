@@ -13,6 +13,8 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.model.EventShopBlacklist
+import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.model.update.UpdateSource
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.Companion.FONT_SIZE_SCALE_AUTO
@@ -775,6 +777,28 @@ class AppSettingsManager internal constructor(
     suspend fun setOperBoxUseYituliuApi(enabled: Boolean) {
         with(AppSettingsSchema) {
             context.dataStore.edit { it[operBoxUseYituliuApi] = enabled.toString() }
+        }
+    }
+
+    val eventShopBlacklistPresets: StateFlow<Set<EventShopPreset>> =
+        setting { EventShopBlacklist.parsePresets(it.eventShopBlacklistPresets) }
+
+    /** 在事务内读改写，连续勾选不会互相覆盖 */
+    suspend fun setEventShopBlacklistPreset(preset: EventShopPreset, enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit {
+                val current = EventShopBlacklist.parsePresets(it[eventShopBlacklistPresets].orEmpty())
+                it[eventShopBlacklistPresets] =
+                    EventShopBlacklist.formatPresets(if (enabled) current + preset else current - preset)
+            }
+        }
+    }
+
+    val eventShopBlacklistCustom: StateFlow<String> = setting { it.eventShopBlacklistCustom }
+
+    suspend fun setEventShopBlacklistCustom(custom: String) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[eventShopBlacklistCustom] = custom }
         }
     }
 

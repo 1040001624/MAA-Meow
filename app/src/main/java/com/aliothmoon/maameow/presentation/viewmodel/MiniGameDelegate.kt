@@ -4,8 +4,11 @@ import android.content.Context
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.data.model.EventShopBlacklist
+import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.activity.MiniGame
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
@@ -37,7 +40,9 @@ private val PIXEL_PAINT_VALUES = setOf("MiniGame@PixelPaint", "MiniGame@PixelPai
 
 /** 实际下发的任务名固定，与选中项的 Value 无关，对齐上游 AsstPixelPaint */
 private const val PIXEL_PAINT_TASK = "MiniGame@PixelPaint@Begin"
-private const val DEFAULT_TASK_NAME = "SS@Store@Begin"
+/** 活动商店，黑名单非空时带 params.event_shop.blacklist */
+private const val EVENT_SHOP_VALUE = "SS@Store@Begin"
+private const val DEFAULT_TASK_NAME = EVENT_SHOP_VALUE
 
 /** 自动提升潜能，勾选后带 params.auto_raise_potential.use_normal_token */
 private const val AUTO_RAISE_POTENTIAL_VALUE = "MiniGame@AutoRaisePotential@Begin"
@@ -58,12 +63,17 @@ class MiniGameDelegate(
     private val achievementRepository: AchievementRepository,
     private val pixelArt: PixelArtDelegate,
     private val sessionLogger: MaaSessionLogger,
+    private val appSettingsManager: AppSettingsManager,
+    private val clientType: () -> String,
 ) {
 
     private val _state = MutableStateFlow(MiniGameUiState())
     val state: StateFlow<MiniGameUiState> = _state.asStateFlow()
 
     val miniGames: StateFlow<List<MiniGame>> = activityManager.miniGames
+
+    val eventShopPresets: StateFlow<Set<EventShopPreset>> = appSettingsManager.eventShopBlacklistPresets
+    val eventShopCustom: StateFlow<String> = appSettingsManager.eventShopBlacklistCustom
 
     fun isSecretFront(selectedTaskName: String): Boolean =
         selectedTaskName == SECRET_FRONT_VALUE
@@ -73,6 +83,9 @@ class MiniGameDelegate(
 
     fun isAutoRaisePotential(selectedTaskName: String): Boolean =
         selectedTaskName == AUTO_RAISE_POTENTIAL_VALUE
+
+    fun isEventShop(selectedTaskName: String): Boolean =
+        selectedTaskName == EVENT_SHOP_VALUE
 
     fun onTaskSelected(value: String) {
         _state.update { it.copy(selectedTaskName = value) }
@@ -91,6 +104,14 @@ class MiniGameDelegate(
         _state.update { it.copy(useNormalToken = useNormalToken) }
     }
 
+    fun onEventShopPresetChanged(preset: EventShopPreset, checked: Boolean) {
+        scope.launch { appSettingsManager.setEventShopBlacklistPreset(preset, checked) }
+    }
+
+    fun onEventShopCustomChanged(custom: String) {
+        scope.launch { appSettingsManager.setEventShopBlacklistCustom(custom) }
+    }
+
     fun findGame(selectedTaskName: String): MiniGame? =
         miniGames.value.find { it.value == selectedTaskName }
 
@@ -106,11 +127,24 @@ class MiniGameDelegate(
         return snapshot.selectedTaskName
     }
 
-    private fun buildTaskParams(): MaaTaskParams {
+    internal fun buildTaskParams(): MaaTaskParams {
         val taskName = buildTaskName()
         val pixelArtState = pixelArt.state.value
+        val eventShopBlacklist = if (isEventShop(_state.value.selectedTaskName)) {
+            EventShopBlacklist.keywords(eventShopPresets.value, eventShopCustom.value, clientType())
+        } else {
+            emptyList()
+        }
         val params = buildJsonObject {
             putJsonArray("task_names") { add(JsonPrimitive(taskName)) }
+            // 黑名单为空时整个 params 不下发，Core 走原流程全买
+            if (eventShopBlacklist.isNotEmpty()) {
+                putJsonObject("params") {
+                    putJsonObject("event_shop") {
+                        putJsonArray("blacklist") { eventShopBlacklist.forEach { add(JsonPrimitive(it)) } }
+                    }
+                }
+            }
             // 不勾选时整个 params 不下发，Core 默认点 × 放弃本次提升
             if (isAutoRaisePotential(_state.value.selectedTaskName) && _state.value.useNormalToken) {
                 putJsonObject("params") {

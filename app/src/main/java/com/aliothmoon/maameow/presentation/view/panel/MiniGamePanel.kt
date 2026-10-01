@@ -31,9 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.model.activity.MiniGame
 import com.aliothmoon.maameow.data.resource.MiniGameTextRegistry
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.components.SelectableCardButton
 import com.aliothmoon.maameow.presentation.viewmodel.MiniGameDelegate
 import com.aliothmoon.maameow.presentation.viewmodel.PixelArtDelegate
@@ -163,6 +165,12 @@ fun MiniGamePanel(
             }
         }
 
+        // 活动商店：勾选或填写的商品不买
+        if (delegate.isEventShop(state.selectedTaskName)) {
+            item { HorizontalDivider() }
+            item { EventShopBlacklistSection(delegate) }
+        }
+
         // 像素画配置：选图 + 转换参数，任务下发仍走底部「开始任务」
         if (delegate.isPixelPaint(state.selectedTaskName)) {
             item { HorizontalDivider() }
@@ -224,6 +232,39 @@ fun MiniGamePanel(
             }
         }
 
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun EventShopBlacklistSection(delegate: MiniGameDelegate) {
+    val presets by delegate.eventShopPresets.collectAsStateWithLifecycle()
+    val custom by delegate.eventShopCustom.collectAsStateWithLifecycle()
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringResource(R.string.panel_mini_game_event_shop_blacklist),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            EventShopPreset.entries.forEach { preset ->
+                CheckBoxWithLabel(
+                    checked = preset in presets,
+                    onCheckedChange = { delegate.onEventShopPresetChanged(preset, it) },
+                    label = stringResource(preset.labelRes),
+                )
+            }
+        }
+        ITextField(
+            value = custom,
+            onValueChange = delegate::onEventShopCustomChanged,
+            label = stringResource(R.string.panel_mini_game_event_shop_custom),
+            placeholder = stringResource(R.string.panel_mini_game_event_shop_custom_hint),
+        )
     }
 }
 

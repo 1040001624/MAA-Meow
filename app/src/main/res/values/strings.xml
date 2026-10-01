@@ -1212,6 +1212,13 @@
     <string name="panel_mini_game_name">小游戏名称</string>
     <string name="panel_mini_game_ending">结局</string>
     <string name="panel_mini_game_use_normal_token">中坚信物不足时使用普通信物</string>
+    <string name="panel_mini_game_event_shop_blacklist">商品黑名单（勾选或填写的商品不购买）</string>
+    <string name="panel_mini_game_event_shop_data_supplement_instrument">数据增补仪</string>
+    <string name="panel_mini_game_event_shop_data_supplement_stick">数据增补条</string>
+    <string name="panel_mini_game_event_shop_lmd">龙门币</string>
+    <string name="panel_mini_game_event_shop_furniture_part">家具零件</string>
+    <string name="panel_mini_game_event_shop_custom">其他商品</string>
+    <string name="panel_mini_game_event_shop_custom_hint">商品名子串即可，分号分隔</string>
     <string name="panel_mini_game_preferred_events">优先系列事件</string>
 
     <!-- mini game: data texts (names / tips, mirrors MaaWpfGui localization keys) -->
