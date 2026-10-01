@@ -548,6 +548,8 @@ fun BackgroundTaskView(
                                             onRemoveNode = viewModel::onRemoveNode,
                                             onDuplicateNode = viewModel::onDuplicateNode,
                                             onRenameNode = viewModel::onRenameNode,
+                                            onRunFromNode = viewModel::onStartTasksFrom,
+                                            canRunFromNode = !isTaskActive,
                                             onSwitchProfile = viewModel::onSwitchProfile,
                                             onRenameProfile = viewModel::onRenameProfile,
                                             onDuplicateProfile = viewModel::onDuplicateProfile,

@@ -464,6 +464,10 @@ class BackgroundTaskViewModel(
         launchManualStart(TaskStartContext(mode = TaskStartMode.MANUAL))
     }
 
+    fun onStartTasksFrom(nodeId: String) {
+        launchManualStart(TaskStartContext(mode = TaskStartMode.MANUAL, fromNodeId = nodeId))
+    }
+
     private fun launchManualStart(context: TaskStartContext) {
         viewModelScope.launch {
             val message = startTasksInternal(context = context)

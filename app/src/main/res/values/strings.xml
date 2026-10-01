@@ -595,6 +595,7 @@
     <string name="panel_config_name_too_long">名称长度不能超过 20 个字符</string>
     <string name="panel_config_delete_task">删除该任务</string>
     <string name="panel_config_duplicate_task">复制任务</string>
+    <string name="panel_config_run_from_here">从此处运行</string>
 
     <!-- panel: profile management -->
     <string name="panel_new_profile">新建配置</string>

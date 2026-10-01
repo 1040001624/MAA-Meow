@@ -189,6 +189,52 @@ class AnalyzeTaskChainUseCaseTest {
         assertEquals(1, ready.plan.params.size)
     }
 
+    // 上游 v6.19.0-beta.1「从此处运行」
+    private val wakeUp = TaskChainNode(
+        name = "开始唤醒",
+        order = 0,
+        config = WakeUpConfig(clientType = "Official", startGameEnabled = true),
+    )
+    private val disabledAward = TaskChainNode(name = "领取奖励1", order = 1, enabled = false, config = AwardConfig())
+    private val award = TaskChainNode(name = "领取奖励2", order = 2, config = AwardConfig())
+
+    @Test
+    fun runFromNode_skipsEarlierNodes() = runBlocking {
+        val result = useCase(listOf(wakeUp, disabledAward, award), fromNodeId = award.id)
+
+        val ready = result as AnalyzeTaskChainResult.Ready
+        assertEquals(listOf(award), ready.plan.nodes)
+        assertEquals(listOf(MaaTaskType.AWARD), ready.plan.params.map { it.type })
+        assertFalse(ready.plan.launchesGame)
+    }
+
+    @Test
+    fun runFromDisabledNode_startsAtNextEnabledNode() = runBlocking {
+        val result = useCase(listOf(wakeUp, disabledAward, award), fromNodeId = disabledAward.id)
+
+        assertEquals(listOf(award), (result as AnalyzeTaskChainResult.Ready).plan.nodes)
+    }
+
+    @Test
+    fun runFromFirstNode_keepsWholeChain() = runBlocking {
+        val result = useCase(listOf(award, wakeUp, disabledAward), fromNodeId = wakeUp.id)
+
+        val ready = result as AnalyzeTaskChainResult.Ready
+        assertEquals(listOf(wakeUp, award), ready.plan.nodes)
+        assertTrue(ready.plan.launchesGame)
+    }
+
+    @Test
+    fun runFromNode_blockedWhenNothingEnabledAfterIt_orNodeIsGone() = runBlocking {
+        val blocked = AnalyzeTaskChainResult.Blocked(
+            reason = AnalyzeTaskChainFailureReason.NO_TASK_SELECTED,
+        )
+        val lastDisabled = disabledAward.copy(order = 3)
+
+        assertEquals(blocked, useCase(listOf(wakeUp, award, lastDisabled), fromNodeId = lastDisabled.id))
+        assertEquals(blocked, useCase(listOf(wakeUp, award), fromNodeId = "removed-node"))
+    }
+
     @Test
     fun roguelikeCoreChar_normalizedToSimplifiedChinese_beforeDispatch() = runBlocking {
         // 繁中服选了繁中名,下发前须反查归一化为简中名(MaaCore core_char 仅认简中名)

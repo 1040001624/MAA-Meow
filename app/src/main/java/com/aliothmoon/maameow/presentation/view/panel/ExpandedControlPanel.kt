@@ -178,6 +178,9 @@ fun ExpandedControlPanel(
                                 onRemoveNode = viewModel::onRemoveNode,
                                 onDuplicateNode = viewModel::onDuplicateNode,
                                 onRenameNode = viewModel::onRenameNode,
+                                onRunFromNode = viewModel::onStartTasksFrom,
+                                canRunFromNode = maaState == MaaExecutionState.IDLE ||
+                                        maaState == MaaExecutionState.ERROR,
                                 onSwitchProfile = viewModel::onSwitchProfile,
                                 onRenameProfile = viewModel::onRenameProfile,
                                 onDuplicateProfile = viewModel::onDuplicateProfile,

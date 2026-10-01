@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -83,6 +84,8 @@ fun TaskConfigPanel(
     onRemoveNode: (String) -> Unit,
     onDuplicateNode: (String) -> Unit,
     onRenameNode: (String, String) -> Unit,
+    onRunFromNode: (String) -> Unit,
+    canRunFromNode: Boolean,
     onSwitchProfile: (String) -> Unit,
     onRenameProfile: (String, String) -> Unit,
     onDuplicateProfile: (String) -> Unit,
@@ -115,7 +118,9 @@ fun TaskConfigPanel(
             isEditMode && selectedNode != null -> {
                 TaskManagementView(
                     node = selectedNode,
+                    canRunFromHere = canRunFromNode,
                     onRename = { onRenameNode(selectedNode.id, it) },
+                    onRunFromHere = { onRunFromNode(selectedNode.id) },
                     onDuplicate = { onDuplicateNode(selectedNode.id) },
                     onRemove = { onRemoveNode(selectedNode.id) })
             }
@@ -295,7 +300,12 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
 
 @Composable
 private fun TaskManagementView(
-    node: TaskChainNode, onRename: (String) -> Unit, onDuplicate: () -> Unit, onRemove: () -> Unit
+    node: TaskChainNode,
+    canRunFromHere: Boolean,
+    onRename: (String) -> Unit,
+    onRunFromHere: () -> Unit,
+    onDuplicate: () -> Unit,
+    onRemove: () -> Unit
 ) {
     var text by remember(node.id) { mutableStateOf(node.name) }
     val typeDisplayName = taskTypeInfoForConfig(node.config)?.let { taskTypeLabel(it) }
@@ -370,6 +380,24 @@ private fun TaskManagementView(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // 跳过之前的任务，对齐 WPF 任务列表右键「从此处运行」
+        OutlinedButton(
+            onClick = onRunFromHere,
+            enabled = canRunFromHere,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(4.dp)
+        ) {
+            Icon(
+                Icons.Default.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.panel_config_run_from_here))
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedButton(
             onClick = onDuplicate,

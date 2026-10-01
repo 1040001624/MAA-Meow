@@ -84,6 +84,23 @@ class PrepareTaskStartUseCaseTest {
     }
 
     @Test
+    fun fromNodeId_inContext_cutsTheChainBeforeAnalysis() = runBlocking {
+        val wakeUp = TaskChainNode(
+            name = "开始唤醒",
+            order = 0,
+            config = WakeUpConfig(clientType = "Official", startGameEnabled = true),
+        )
+        val award = TaskChainNode(name = "领取奖励", order = 1, config = AwardConfig())
+
+        val result = useCase(AppAliveStatus.ALIVE)(
+            chain = listOf(wakeUp, award),
+            context = TaskStartContext(mode = TaskStartMode.MANUAL, fromNodeId = award.id),
+        )
+
+        assertEquals(listOf(award), (result as TaskStartDecision.Ready).plan.nodes)
+    }
+
+    @Test
     fun conflictingClientTypes_listsLocalizedNamesAsDetail() = runBlocking {
         val result = useCase(AppAliveStatus.ALIVE)(
             chain = listOf(

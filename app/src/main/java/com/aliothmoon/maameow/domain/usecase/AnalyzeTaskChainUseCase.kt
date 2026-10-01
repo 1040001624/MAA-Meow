@@ -39,18 +39,26 @@ class AnalyzeTaskChainUseCase(
     private val appSettingsManager: AppSettingsManager,
     private val relocatePath: (String) -> String = { it },
 ) {
-    /** 先等 depot/operBox 分片装载；config 的 toTaskParams 仍是非 suspend。 */
-    suspend operator fun invoke(chain: List<TaskChainNode>): AnalyzeTaskChainResult {
+    /**
+     * 先等 depot/operBox 分片装载；config 的 toTaskParams 仍是非 suspend。
+     *
+     * @param fromNodeId 从此节点起运行，之前的节点本轮跳过；节点未启用则顺延到其后首个启用的
+     */
+    suspend operator fun invoke(
+        chain: List<TaskChainNode>,
+        fromNodeId: String? = null,
+    ): AnalyzeTaskChainResult {
         depotRepository.isLoaded.first { it }
         operBoxRepository.isLoaded.first { it }
 
-        val nodes = chain.filter { it.enabled }.sortedBy { it.order }
+        val enabled = chain.filter { it.enabled }.sortedBy { it.order }
+        val nodes = enabled.startingFrom(chain, fromNodeId)
         if (nodes.isEmpty()) {
             return AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.NO_TASK_SELECTED,
             )
         }
-        val list = getWakeUpClientTypeList(nodes)
+        val list = getWakeUpClientTypeList(enabled)
         if (list.size > 1) {
             return AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.CONFLICTING_CLIENT_TYPES,
@@ -59,7 +67,8 @@ class AnalyzeTaskChainUseCase(
         }
 
 
-        val info = MallCreditFightAvailability.resolve(nodes, activityManager)
+        // 被跳过的理智作战下次仍要用「上次」关卡，借助战按整条链判断
+        val info = MallCreditFightAvailability.resolve(enabled, activityManager)
 
         dropsRefresher.clear()
 
@@ -138,6 +147,16 @@ class AnalyzeTaskChainUseCase(
                     task.type != MaaTaskType.DEPOT ||
                     params[index - 1].type != MaaTaskType.DEPOT
         }
+
+    /** 起点节点已不在链上时返回空，按「未选择任务」拦截 */
+    private fun List<TaskChainNode>.startingFrom(
+        chain: List<TaskChainNode>,
+        fromNodeId: String?,
+    ): List<TaskChainNode> {
+        fromNodeId ?: return this
+        val from = chain.firstOrNull { it.id == fromNodeId } ?: return emptyList()
+        return filter { it.order >= from.order }
+    }
 
     private fun getWakeUpClientTypeList(nodes: List<TaskChainNode>): List<String> {
         return nodes.mapNotNull { (it.config as? WakeUpConfig)?.clientType }

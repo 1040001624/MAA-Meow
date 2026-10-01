@@ -360,6 +360,7 @@
     <string name="panel_config_name_too_long">Name must be at most 20 characters</string>
     <string name="panel_config_delete_task">Delete Task</string>
     <string name="panel_config_duplicate_task">Duplicate Task</string>
+    <string name="panel_config_run_from_here">Run from Here</string>
 
     <!-- panel: profile management -->
     <string name="panel_new_profile">New Profile</string>
