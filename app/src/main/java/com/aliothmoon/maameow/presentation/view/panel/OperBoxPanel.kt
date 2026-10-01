@@ -53,6 +53,7 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportFormatter
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportLabels
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
+import com.aliothmoon.maameow.presentation.components.OperAvatar
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -349,6 +350,11 @@ private fun OperatorRow(oper: OperBoxOperator) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
+                    OperAvatar(
+                        operId = oper.id,
+                        modifier = Modifier.size(32.dp),
+                        desaturated = !oper.own,
+                    )
                     Text(
                         text = "${oper.rarity}★",
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),

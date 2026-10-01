@@ -55,6 +55,7 @@ import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
+import com.aliothmoon.maameow.data.resource.OperAvatarLoader
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.data.resource.StageApCostHelper
 import com.aliothmoon.maameow.domain.launch.CountdownUI
@@ -327,6 +328,7 @@ val appModule = module {
     singleOf(::ItemHelper)
     singleOf(::StageApCostHelper)
     singleOf(::ItemIconLoader)
+    singleOf(::OperAvatarLoader)
     singleOf(::ActivityManager)
     singleOf(::ResourceDataManager)
     // Copilot (自动战斗)
