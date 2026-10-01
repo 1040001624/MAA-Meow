@@ -11,44 +11,76 @@ import com.aliothmoon.maameow.R
 enum class EventShopPreset(
     val itemId: String,
     @param:StringRes val labelRes: Int,
+    private val keyword: String,
+    private val keywordByClient: Map<String, String>,
 ) {
-    DATA_SUPPLEMENT_INSTRUMENT("mod_update_token_2", R.string.panel_mini_game_event_shop_data_supplement_instrument),
-    DATA_SUPPLEMENT_STICK("mod_update_token_1", R.string.panel_mini_game_event_shop_data_supplement_stick),
-    LMD("4001", R.string.panel_mini_game_event_shop_lmd),
-    FURNITURE_PART("3401", R.string.panel_mini_game_event_shop_furniture_part),
+    DATA_SUPPLEMENT_INSTRUMENT(
+        "mod_update_token_2",
+        R.string.panel_mini_game_event_shop_data_supplement_instrument,
+        "数据增补仪",
+        mapOf(
+            "YoStarEN" to "Data Supplement Instrument",
+            "YoStarJP" to "データ補完マシン",
+            "YoStarKR" to "데이터 리더기",
+            "txwy" to "數據增補儀",
+        ),
+    ),
+    DATA_SUPPLEMENT_STICK(
+        "mod_update_token_1",
+        R.string.panel_mini_game_event_shop_data_supplement_stick,
+        "数据增补条",
+        mapOf(
+            "YoStarEN" to "Data Supplement Stick",
+            "YoStarJP" to "データ補完チップ",
+            "YoStarKR" to "데이터 메모리",
+            "txwy" to "數據增補條",
+        ),
+    ),
+    LMD(
+        "4001",
+        R.string.panel_mini_game_event_shop_lmd,
+        "龙门币",
+        mapOf(
+            "YoStarEN" to "LMD",
+            "YoStarJP" to "龍門幣",
+            "YoStarKR" to "용문폐",
+            "txwy" to "龍門幣",
+        ),
+    ),
+    FURNITURE_PART(
+        "3401",
+        R.string.panel_mini_game_event_shop_furniture_part,
+        "家具",
+        mapOf(
+            "YoStarEN" to "Furniture Part",
+            "YoStarJP" to "家具",
+            "YoStarKR" to "가구 부품",
+            "txwy" to "傢俱",
+        ),
+    ),
     ;
 
-    companion object {
-        fun fromItemId(itemId: String): EventShopPreset? = entries.firstOrNull { it.itemId == itemId }
-    }
+    fun keyword(clientType: String): String = keywordByClient[clientType] ?: keyword
 }
 
 object EventShopBlacklist {
 
-    /** 自定义商品关键词的分隔符，与信用商店黑名单一致 */
-    const val CUSTOM_SEPARATOR = ';'
+    private const val CUSTOM_SEPARATOR = ';'
 
-    // 与信用商店一样直接提交关键词，匹配语言由游戏客户端而非界面语言决定
-    private val KEYWORDS_BY_CLIENT = mapOf(
-        "YoStarEN" to listOf("Data Supplement Instrument", "Data Supplement Stick", "LMD", "Furniture Part"),
-        "YoStarJP" to listOf("データ補完マシン", "データ補完チップ", "龍門幣", "家具"),
-        "YoStarKR" to listOf("데이터 리더기", "데이터 메모리", "용문폐", "가구 부품"),
-        "txwy" to listOf("數據增補儀", "數據增補條", "龍門幣", "傢俱"),
-    )
-    private val DEFAULT_KEYWORDS = listOf("数据增补仪", "数据增补条", "龙门币", "家具")
-
-    fun parsePresets(stored: String): Set<EventShopPreset> =
-        stored.split(',').mapNotNullTo(linkedSetOf()) { EventShopPreset.fromItemId(it.trim()) }
+    fun parsePresets(stored: String): Set<EventShopPreset> {
+        val ids = stored.split(',').map { it.trim() }
+        return EventShopPreset.entries.filterTo(linkedSetOf()) { it.itemId in ids }
+    }
 
     fun formatPresets(presets: Set<EventShopPreset>): String =
         EventShopPreset.entries.filter { it in presets }.joinToString(",") { it.itemId }
 
     /** 下发给 Core 的关键词：自定义在前，常用商品按固定顺序在后，去重；为空表示不启用黑名单 */
-    fun keywords(presets: Set<EventShopPreset>, custom: String, clientType: String): List<String> {
-        val presetKeywords = KEYWORDS_BY_CLIENT[clientType] ?: DEFAULT_KEYWORDS
-        return buildList {
-            custom.split(CUSTOM_SEPARATOR).mapNotNullTo(this) { it.trim().ifEmpty { null } }
-            EventShopPreset.entries.filter { it in presets }.mapTo(this) { presetKeywords[it.ordinal] }
+    fun keywords(presets: Set<EventShopPreset>, custom: String, clientType: String): List<String> =
+        buildList {
+            // 中文输入法打出的全角分号也认，对齐 WPF EventShopBlackList
+            custom.replace('；', CUSTOM_SEPARATOR).split(CUSTOM_SEPARATOR)
+                .mapNotNullTo(this) { it.trim().ifEmpty { null } }
+            EventShopPreset.entries.filter { it in presets }.mapTo(this) { it.keyword(clientType) }
         }.distinct()
-    }
 }

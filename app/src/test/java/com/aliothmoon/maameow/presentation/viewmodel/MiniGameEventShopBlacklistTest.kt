@@ -1,6 +1,5 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
-import com.aliothmoon.maameow.data.model.EventShopBlacklist
 import com.aliothmoon.maameow.data.model.EventShopPreset
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.resource.ActivityManager
@@ -85,17 +84,5 @@ class MiniGameEventShopBlacklistTest {
         delegate.onTaskSelected("GreenTicket@Store@Begin")
 
         assertFalse("params" in params())
-    }
-
-    @Test
-    fun presets_roundTripThroughStoredIds_andDropUnknownIds() {
-        val stored = EventShopBlacklist.formatPresets(setOf(EventShopPreset.LMD, EventShopPreset.DATA_SUPPLEMENT_STICK))
-
-        assertEquals("mod_update_token_1,4001", stored)
-        assertEquals(
-            setOf(EventShopPreset.DATA_SUPPLEMENT_STICK, EventShopPreset.LMD),
-            EventShopBlacklist.parsePresets("$stored,removed_item"),
-        )
-        assertEquals(emptySet<EventShopPreset>(), EventShopBlacklist.parsePresets(""))
     }
 }

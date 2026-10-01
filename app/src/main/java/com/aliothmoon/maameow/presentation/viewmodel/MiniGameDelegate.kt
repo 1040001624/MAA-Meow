@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray
@@ -129,34 +130,42 @@ class MiniGameDelegate(
 
     internal fun buildTaskParams(): MaaTaskParams {
         val taskName = buildTaskName()
-        val pixelArtState = pixelArt.state.value
-        val eventShopBlacklist = if (isEventShop(_state.value.selectedTaskName)) {
-            EventShopBlacklist.keywords(eventShopPresets.value, eventShopCustom.value, clientType())
-        } else {
-            emptyList()
-        }
         val params = buildJsonObject {
             putJsonArray("task_names") { add(JsonPrimitive(taskName)) }
-            // 黑名单为空时整个 params 不下发，Core 走原流程全买
-            if (eventShopBlacklist.isNotEmpty()) {
-                putJsonObject("params") {
-                    putJsonObject("event_shop") {
-                        putJsonArray("blacklist") { eventShopBlacklist.forEach { add(JsonPrimitive(it)) } }
+            buildExtraParams()?.let { put("params", it) }
+        }.toString()
+        return MaaTaskParams(MaaTaskType.CUSTOM, params)
+    }
+
+    /** 各玩法的附加参数，同一时间只有一种；null 表示整个 params 不下发 */
+    private fun buildExtraParams(): JsonObject? {
+        val snapshot = _state.value
+        val selected = snapshot.selectedTaskName
+        return when {
+            // 黑名单为空时 Core 走原流程全买
+            isEventShop(selected) ->
+                EventShopBlacklist.keywords(eventShopPresets.value, eventShopCustom.value, clientType())
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { blacklist ->
+                        buildJsonObject {
+                            putJsonObject("event_shop") {
+                                putJsonArray("blacklist") { blacklist.forEach { add(JsonPrimitive(it)) } }
+                            }
+                        }
                     }
+
+            // 不勾选时 Core 默认点 × 放弃本次提升
+            isAutoRaisePotential(selected) && snapshot.useNormalToken -> buildJsonObject {
+                putJsonObject("auto_raise_potential") {
+                    put("use_normal_token", true)
                 }
             }
-            // 不勾选时整个 params 不下发，Core 默认点 × 放弃本次提升
-            if (isAutoRaisePotential(_state.value.selectedTaskName) && _state.value.useNormalToken) {
-                putJsonObject("params") {
-                    putJsonObject("auto_raise_potential") {
-                        put("use_normal_token", true)
-                    }
-                }
-            }
-            // 像素画额外带 params.pixel_paint.groups，由 Core 的 PixelPaintTaskPlugin 消费
-            if (isPixelPaint(_state.value.selectedTaskName)) {
+
+            // 由 Core 的 PixelPaintTaskPlugin 消费
+            isPixelPaint(selected) -> {
+                val pixelArtState = pixelArt.state.value
                 pixelArtState.plan?.let { plan ->
-                    putJsonObject("params") {
+                    buildJsonObject {
                         putJsonObject("pixel_paint") {
                             put("swipe", pixelArtState.swipeEnabled)
                             put("grid_delay", pixelArtState.gridDelayMs)
@@ -179,8 +188,9 @@ class MiniGameDelegate(
                     }
                 }
             }
-        }.toString()
-        return MaaTaskParams(MaaTaskType.CUSTOM, params)
+
+            else -> null
+        }
     }
 
     fun onStart() {
