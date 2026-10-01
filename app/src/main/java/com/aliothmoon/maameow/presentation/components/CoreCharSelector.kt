@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -173,8 +172,18 @@ fun CoreCharSelector(
             ExpandableTipContent(visible = tipExpanded, tipText = themeTip)
         }
 
-        // 输入框
-        Box {
+        // 输入框；头像跟已生效的配置值走，输入到一半不会跟着闪
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (value.isNotBlank()) {
+                OperAvatarByName(
+                    name = value,
+                    modifier = Modifier.size(40.dp),
+                    resourceDataManager = resourceDataManager,
+                )
+            }
             ITextField(
                 value = inputText,
                 onValueChange = { newValue ->
@@ -182,7 +191,7 @@ fun CoreCharSelector(
                 },
                 placeholder = stringResource(R.string.core_char_selector_placeholder),
                 outlineColor = if (!isValid && !isValidating) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
                 enabled = enabled,
                 trailingIcon = if (enabled && (inputText.isNotEmpty() || recommendedChars.isNotEmpty())) {
                     {
@@ -275,9 +284,15 @@ fun CoreCharSelector(
                                     // 立即更新配置
                                     onValueChange(charName)
                                 }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            OperAvatarByName(
+                                name = charName,
+                                modifier = Modifier.size(28.dp),
+                                resourceDataManager = resourceDataManager,
+                            )
                             Text(
                                 text = charName,
                                 style = MaterialTheme.typography.bodySmall,

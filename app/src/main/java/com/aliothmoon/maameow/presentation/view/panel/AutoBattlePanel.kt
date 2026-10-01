@@ -93,6 +93,7 @@ import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.components.OperAvatarByName
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotTabs
@@ -1081,6 +1082,7 @@ private fun OperatorRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        OperAvatarByName(name = item.name, modifier = Modifier.size(24.dp))
         Surface(
             shape = RoundedCornerShape(4.dp),
             color = MaterialTheme.colorScheme.primaryContainer

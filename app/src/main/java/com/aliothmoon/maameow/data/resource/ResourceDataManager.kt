@@ -301,11 +301,12 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
             Timber.e(e, "加载 battle_data.json 失败")
             emptyMap()
         }
+        // 名称索引先发布：观察 characters 的界面按名查找时索引已是新的
+        _nameIndex.value = doBuildNameIndex(characters)
         _characters.value = characters
         _operators.value = characters.filter { (id, info) ->
             info.isOperator && id !in VIRTUAL_OPERATORS
         }
-        _nameIndex.value = doBuildNameIndex(characters)
         _characterNames.value = doBuildCharacterNames(characters, displayLanguage, clientType)
     }
 
