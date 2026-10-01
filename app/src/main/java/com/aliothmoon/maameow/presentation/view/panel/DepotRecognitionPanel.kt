@@ -2,9 +2,7 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import android.content.ClipData
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,14 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.toClipEntry
@@ -54,6 +49,7 @@ import com.aliothmoon.maameow.data.repository.toSortedItems
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
+import com.aliothmoon.maameow.presentation.components.ItemIcon
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
@@ -171,7 +167,7 @@ fun DepotRecognitionPanel(
         // 物品网格
         items(items, key = { it.id }) { item ->
             val name = itemMap[item.id]?.name
-            DepotItemCell(item, name, iconLoader)
+            DepotItemCell(item, name)
         }
     }
 }
@@ -272,16 +268,7 @@ private fun HintRow(text: String) {
 }
 
 @Composable
-private fun rememberItemIcon(itemId: String, loader: ItemIconLoader): State<ImageBitmap?> {
-    // 首帧直接用缓存，免得滚回来先空一帧
-    return produceState(initialValue = loader.peek(itemId), itemId) {
-        if (value == null) value = loader.load(itemId)
-    }
-}
-
-@Composable
-private fun DepotItemCell(item: DepotItem, name: String?, iconLoader: ItemIconLoader) {
-    val icon by rememberItemIcon(item.id, iconLoader)
+private fun DepotItemCell(item: DepotItem, name: String?) {
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -292,17 +279,11 @@ private fun DepotItemCell(item: DepotItem, name: String?, iconLoader: ItemIconLo
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            val bitmap = icon
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = name,
-                    modifier = Modifier.size(44.dp)
-                )
-            } else {
-                // 加载中 / 无图：同尺寸占位，避免网格抖动
-                Box(modifier = Modifier.size(44.dp))
-            }
+            ItemIcon(
+                itemId = item.id,
+                modifier = Modifier.size(44.dp),
+                contentDescription = name,
+            )
             Text(
                 text = name ?: item.id,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),

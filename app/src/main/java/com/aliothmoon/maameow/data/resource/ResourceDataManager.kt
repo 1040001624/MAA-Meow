@@ -37,6 +37,9 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
     val characters: StateFlow<Map<String, CharacterInfo>> = _characters.asStateFlow()
     val operators: StateFlow<Map<String, CharacterInfo>> = _operators.asStateFlow()
 
+    /** [getCharacterByNameOrAlias] 查的索引；界面按名查干员时观察它，表重建后跟着重查 */
+    val nameIndex: StateFlow<Map<String, CharacterInfo>> = _nameIndex.asStateFlow()
+
     /** 当前语言与客户端类型下的干员名集合, see WPF: DataHelper.CharacterNames */
     val characterNames: StateFlow<Set<String>> = _characterNames.asStateFlow()
     val recruitTags: StateFlow<Map<String, Pair<String, String>>> = _recruitTags.asStateFlow()
@@ -301,12 +304,11 @@ class ResourceDataManager(val pathConfig: MaaPathConfig) {
             Timber.e(e, "加载 battle_data.json 失败")
             emptyMap()
         }
-        // 名称索引先发布：观察 characters 的界面按名查找时索引已是新的
-        _nameIndex.value = doBuildNameIndex(characters)
         _characters.value = characters
         _operators.value = characters.filter { (id, info) ->
             info.isOperator && id !in VIRTUAL_OPERATORS
         }
+        _nameIndex.value = doBuildNameIndex(characters)
         _characterNames.value = doBuildCharacterNames(characters, displayLanguage, clientType)
     }
 

@@ -1,11 +1,8 @@
 package com.aliothmoon.maameow.presentation.components
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,19 +25,13 @@ fun OperAvatarByName(
     resourceDataManager: ResourceDataManager = koinInject(),
 ) {
     // 干员表异步加载，换客户端或语言会重建，跟着重查
-    val characters by resourceDataManager.characters.collectAsStateWithLifecycle()
-    val operId = remember(name, characters) {
+    val nameIndex by resourceDataManager.nameIndex.collectAsStateWithLifecycle()
+    val operId = remember(name, nameIndex) {
         resourceDataManager.getCharacterByNameOrAlias(name)?.id.orEmpty()
     }
     OperAvatar(operId = operId, modifier = modifier)
 }
 
-/**
- * 干员头像；加载中或资源缺失时留同尺寸空位，避免列表抖动
- *
- * @param operId 干员 id，如 char_002_amiya
- * @param desaturated 降低饱和度，用于未拥有的干员
- */
 @Composable
 fun OperAvatar(
     operId: String,
@@ -48,20 +39,10 @@ fun OperAvatar(
     desaturated: Boolean = false,
     loader: OperAvatarLoader = koinInject(),
 ) {
-    // 首帧直接用缓存，免得滚回来先空一帧
-    val avatar by produceState(initialValue = loader.peek(operId), operId) {
-        if (value == null) value = loader.load(operId)
-    }
-    val shaped = modifier.clip(RoundedCornerShape(4.dp))
-    val bitmap = avatar
-    if (bitmap != null) {
-        Image(
-            bitmap = bitmap,
-            contentDescription = null,
-            modifier = shaped,
-            colorFilter = if (desaturated) DesaturatedFilter else null,
-        )
-    } else {
-        Box(modifier = shaped)
-    }
+    TemplateImage(
+        id = operId,
+        loader = loader,
+        modifier = modifier.clip(RoundedCornerShape(4.dp)),
+        colorFilter = if (desaturated) DesaturatedFilter else null,
+    )
 }
