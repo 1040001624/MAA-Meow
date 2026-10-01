@@ -583,7 +583,7 @@
     <string name="maa_complete_task">Complete task: </string>
     <string name="maa_task_stopped">Has stopped</string>
     <string name="maa_all_tasks_complete">All task(s) completed!</string>
-    <string name="maa_task_completed_with_errors">All task(s) completed, but errors occurred!</string>
+    <string name="maa_task_completed_with_errors">Tasks finished, but errors occurred in the following tasks:\n%1$s</string>
     <string name="maa_task_error_summary_title">The following tasks failed this run:</string>
     <string name="maa_routing_restart_too_many_battles">Too many battles ahead: %1$s, restarting route</string>
     <string name="maa_ends_with_script">Ends with Script</string>
@@ -638,6 +638,13 @@
     <string name="maa_game_drop">Game disconnected, stopping tasks</string>
     <string name="maa_roguelike_game_pass">Exploration completed! Congratulations!</string>
     <string name="maa_roguelike_special_item_bought">Special Item Purchased!</string>
+    <string name="maa_roguelike_event">Event:</string>
+    <string name="maa_roguelike_encounter_options">Detected %1$d options:</string>
+    <string name="maa_roguelike_encounter_enabled_option">Available option: %1$s</string>
+    <string name="maa_roguelike_encounter_disabled_option">Unavailable option: %1$s</string>
+    <string name="maa_roguelike_event_selected">Selected: %1$s</string>
+    <string name="maa_roguelike_event_selected_with_reason">Selected: %1$s (%2$s)</string>
+    <string name="maa_roguelike_event_selected_fallback">Target unavailable, fallback selected: %1$s</string>
     <string name="maa_deep_exploration_not_unlocked_complain">Deep Investigation not unlocked yet</string>
     <string name="maa_reclamation_pns_mode_error">Currently using no-save task mode. Please manually delete existing save and try again. If you wish to keep the save, please consider switching modes.</string>
     <string name="maa_reclamation_pis_mode_error">Current task mode requires you to have a save with craftable items. Please consider switching modes.</string>
@@ -1481,7 +1488,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="panel_roguelike_reward_random">Random Reward</string>
     <string name="panel_roguelike_reward_key">Key</string>
     <string name="panel_roguelike_reward_dice">Dice</string>
-    <string name="panel_roguelike_reward_ideas">Thought</string>
+    <string name="panel_roguelike_reward_ideas">Plan</string>
     <string name="panel_roguelike_reward_ticket">Coupon</string>
     <string name="panel_roguelike_squad_leader">Leader Squad</string>
     <string name="panel_roguelike_squad_support">Support Squad</string>

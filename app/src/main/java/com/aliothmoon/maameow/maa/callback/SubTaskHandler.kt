@@ -591,6 +591,12 @@ class SubTaskHandler(
                 }
             }
 
+            "RoguelikeEvent" ->
+                append("${str("RoguelikeEvent")} ${subDetails?.getString("name").orEmpty()}", LogLevel.INFO)
+
+            "RoguelikeEncounterOptions" -> handleRoguelikeEncounterOptions(subDetails)
+            "RoguelikeEventSelected" -> handleRoguelikeEventSelected(subDetails)
+
             "BlackFlowStrategyStarted" -> {
                 val profile = resources.getString(
                     BlackFlowLogText.profile(subDetails?.getString("profile"))
@@ -1138,6 +1144,39 @@ class SubTaskHandler(
                 )
             }
         }
+    }
+
+    // ==================== 肉鸽事件回调 ====================
+
+    private fun handleRoguelikeEncounterOptions(subDetails: JSONObject?) {
+        val options = subDetails?.getJSONArray("options") ?: return
+        val lines = buildList {
+            add(str("RoguelikeEncounterOptions", options.size))
+            for (i in options.indices) {
+                val option = options.getJSONObject(i) ?: continue
+                val key = if (option.getBooleanValue("enabled")) {
+                    "RoguelikeEncounterEnabledOption"
+                } else {
+                    "RoguelikeEncounterDisabledOption"
+                }
+                add(str(key, option.getString("text").orEmpty()))
+            }
+        }
+        append(lines.joinToString("\n"), LogLevel.INFO)
+    }
+
+    // 理由取自策略文件里命中规则的 description，兜底选择不显示
+    private fun handleRoguelikeEventSelected(subDetails: JSONObject?) {
+        val optionText = subDetails?.getString("option_text").orEmpty()
+        val reason = subDetails?.getString("rule_description")
+        val message = when {
+            subDetails?.getBooleanValue("used_fallback") == true ->
+                str("RoguelikeEventSelectedFallback", optionText)
+
+            reason.isNullOrBlank() -> str("RoguelikeEventSelected", optionText)
+            else -> str("RoguelikeEventSelectedWithReason", optionText, reason)
+        }
+        append(message, LogLevel.INFO)
     }
 
     // ==================== 黑流树海回调 ====================

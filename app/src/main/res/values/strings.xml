@@ -22,7 +22,7 @@
     <string name="maa_complete_task">完成任务: </string>
     <string name="maa_task_stopped">任务已停止</string>
     <string name="maa_all_tasks_complete">任务已全部完成！</string>
-    <string name="maa_task_completed_with_errors">任务已全部完成，但出现错误！</string>
+    <string name="maa_task_completed_with_errors">任务已结束，以下任务出现错误:\n%1$s</string>
     <string name="maa_task_error_summary_title">本轮任务出现以下错误：</string>
     <string name="maa_routing_restart_too_many_battles">前方战斗数：%1$s，重开路线</string>
     <string name="maa_ends_with_script">结束后脚本</string>
@@ -83,6 +83,13 @@
     <string name="maa_game_drop">游戏掉线，停止任务</string>
     <string name="maa_roguelike_game_pass">肉鸽通关啦！</string>
     <string name="maa_roguelike_special_item_bought">购买了特殊商品！</string>
+    <string name="maa_roguelike_event">事件:</string>
+    <string name="maa_roguelike_encounter_options">识别到 %1$d 个选项:</string>
+    <string name="maa_roguelike_encounter_enabled_option">可选选项: %1$s</string>
+    <string name="maa_roguelike_encounter_disabled_option">不可选选项: %1$s</string>
+    <string name="maa_roguelike_event_selected">已选择: %1$s</string>
+    <string name="maa_roguelike_event_selected_with_reason">已选择: %1$s（%2$s）</string>
+    <string name="maa_roguelike_event_selected_fallback">目标选项不可用，兜底选择: %1$s</string>
     <string name="maa_deep_exploration_not_unlocked_complain">深入调查未解锁</string>
     <string name="maa_reclamation_pns_mode_error">当前使用无存档任务模式。请手动删除现有存档后再尝试。若您希望保留存档，请考虑切换模式。</string>
     <string name="maa_reclamation_pis_mode_error">当前任务模式需要您拥有可合成道具的存档。请考虑切换模式。</string>
