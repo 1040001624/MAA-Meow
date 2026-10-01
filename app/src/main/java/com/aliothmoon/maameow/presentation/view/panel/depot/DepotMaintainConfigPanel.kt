@@ -74,6 +74,7 @@ import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.InlineActionRow
 import com.aliothmoon.maameow.presentation.components.InlineConfirmPanel
+import com.aliothmoon.maameow.presentation.components.ItemIcon
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.view.panel.common.GroupedStageButtonGroup
 import com.aliothmoon.maameow.presentation.view.panel.common.ItemButtonGroup
@@ -290,6 +291,10 @@ private fun PlanSummary(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(18.dp),
                     )
+                    if (plan.dropId.isNotEmpty()) {
+                        ItemIcon(itemId = plan.dropId, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
                     Text(
                         text = stageDisplayName(plan.stage, stageGroups) +
                                 " · " + (itemNameMap[plan.dropId] ?: notSelectedLabel),
@@ -710,6 +715,10 @@ private fun PlanCard(
                     .clickable { onToggleExpand() },
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (plan.dropId.isNotEmpty()) {
+                    ItemIcon(itemId = plan.dropId, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
                 Text(
                     text = stageDisplayName(
                         plan.stage,

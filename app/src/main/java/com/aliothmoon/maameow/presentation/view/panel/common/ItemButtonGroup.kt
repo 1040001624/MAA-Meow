@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.components.ItemIcon
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
 
@@ -68,6 +69,9 @@ fun ItemButtonGroup(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.weight(1f))
+            if (selectedValue.isNotEmpty()) {
+                ItemIcon(itemId = selectedValue, modifier = Modifier.size(22.dp))
+            }
             StageBadge(text = selectedDisplay)
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -87,7 +91,8 @@ fun ItemButtonGroup(
                 selectedValue = selectedValue,
                 options = items.map { it to displayMapper(it) },
                 onSelected = onItemSelected,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                leading = { ItemIcon(itemId = it, modifier = Modifier.size(22.dp)) }
             )
         }
     }
