@@ -81,6 +81,22 @@ class TaskChainHandlerCompletionTest {
     }
 
     @Test
+    fun errors_keepSanityReportInSeparateLog() {
+        failTasks()
+        every { subTaskHandler.lastSanitySnapshot } returns SubTaskHandler.SanitySnapshot(current = 135, max = 135)
+        every { resources.getIdentifier("maa_current_sanity", "string", pkg) } returns 4
+        every { resources.getString(4, *anyVararg()) } returns "当前理智: 135/135"
+
+        handler.onAllTasksCompleted()
+
+        val title = "任务已结束，以下任务出现错误:\n理智作战, 基建换班"
+        verify(exactly = 2) { sessionLogger.append(any<String>(), any()) }
+        verify { sessionLogger.append(title, LogLevel.ERROR) }
+        verify { sessionLogger.append("当前理智: 135/135", LogLevel.MESSAGE) }
+        verify { notificationCenter.notifyAllTasksCompleted("$title\n当前理智: 135/135", null) }
+    }
+
+    @Test
     fun manualStop_keepsPlainTitle_andListsErrorsSeparately() {
         failTasks()
 

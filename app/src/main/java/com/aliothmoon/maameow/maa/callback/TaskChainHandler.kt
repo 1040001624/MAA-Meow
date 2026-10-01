@@ -238,73 +238,38 @@ class TaskChainHandler(
         // 手动停止本就不是「全部完成」，标题不跟着改，出错清单另起一段给出
         val hasTaskErrors = failedTaskNames.isNotEmpty()
         val titledWithErrors = hasTaskErrors && !asStopped
-        val sb = StringBuilder(
-            if (titledWithErrors) {
-                str("TaskCompletedWithErrors", failedTaskNames.joinToString(", "))
-            } else {
-                str("AllTasksComplete")
-            }
-        )
+        val headline = buildString {
+            append(
+                if (titledWithErrors) {
+                    str("TaskCompletedWithErrors", failedTaskNames.joinToString(", "))
+                } else {
+                    str("AllTasksComplete")
+                }
+            )
 
-        // 任务总耗时
-        val startMillis = sessionLogger.sessionStartTimeMillis
-        if (startMillis > 0) {
-            val elapsed = System.currentTimeMillis() - startMillis
-            achievementReporter.reportAllTasksCompleted(elapsed)
-            val h = elapsed / 3_600_000
-            val m = (elapsed % 3_600_000) / 60_000
-            val s = (elapsed % 60_000) / 1_000
-            val timeStr = buildString {
+            // 任务总耗时
+            val startMillis = sessionLogger.sessionStartTimeMillis
+            if (startMillis > 0) {
+                val elapsed = System.currentTimeMillis() - startMillis
+                achievementReporter.reportAllTasksCompleted(elapsed)
+                val h = elapsed / 3_600_000
+                val m = (elapsed % 3_600_000) / 60_000
+                val s = (elapsed % 60_000) / 1_000
+                append(" (")
                 if (h > 0) append("${h}h ")
                 if (h > 0 || m > 0) append("${m}m ")
-                append("${s}s")
-            }
-            sb.append(" ($timeStr)")
-        } else {
-            achievementReporter.reportAllTasksCompleted()
-        }
-        val headline = sb.toString()
-
-        // 理智恢复时间
-        val snapshot = subTaskHandler.lastSanitySnapshot
-        if (snapshot != null) {
-            sb.append("\n")
-            sb.append(str("CurrentSanity", snapshot.current, snapshot.max))
-
-            if (snapshot.current < snapshot.max) {
-                val recoveryMinutes = (snapshot.max - snapshot.current) * 6L
-                val recoveryMillis = snapshot.reportTimeMillis + recoveryMinutes * 60_000
-                val recoveryTime = Instant.ofEpochMilli(recoveryMillis)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime()
-                val remainMinutes = ((recoveryMillis - System.currentTimeMillis()) / 60_000)
-                    .coerceAtLeast(0)
-                val rh = remainMinutes / 60
-                val rm = remainMinutes % 60
-                val remainStr = buildString {
-                    if (rh > 0) append("${rh}h ")
-                    append("${rm}m")
-                }
-
-                sb.append("\n")
-                sb.append(
-                    str(
-                        "SanityRecovery",
-                        recoveryTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
-                        remainStr
-                    )
-                )
-                // TODO: 延迟定时提醒（理智恢复前 6 分钟推送通知）
+                append("${s}s)")
+            } else {
+                achievementReporter.reportAllTasksCompleted()
             }
         }
+        val sanityReport = subTaskHandler.lastSanitySnapshot?.let(::buildSanityReport)
 
-        val message = sb.toString()
+        val message = listOfNotNull(headline, sanityReport).joinToString("\n")
         if (titledWithErrors) {
             // 标题连同出错任务名标红，理智报告留在下一段默认色
             sessionLogger.append(headline, LogLevel.ERROR)
-            message.removePrefix(headline).trimStart('\n')
-                .takeIf { it.isNotBlank() }
-                ?.let { sessionLogger.append(it, LogLevel.MESSAGE) }
+            sanityReport?.let { sessionLogger.append(it, LogLevel.MESSAGE) }
         } else {
             sessionLogger.append(message, if (asStopped) LogLevel.INFO else LogLevel.SUCCESS)
         }
@@ -323,6 +288,35 @@ class TaskChainHandler(
         callbackScope.launch {
             taskChainState.clearRecruitUseExpeditedFlags()
         }
+    }
+
+    private fun buildSanityReport(snapshot: SubTaskHandler.SanitySnapshot): String = buildString {
+        append(str("CurrentSanity", snapshot.current, snapshot.max))
+        if (snapshot.current >= snapshot.max) return@buildString
+
+        val recoveryMinutes = (snapshot.max - snapshot.current) * 6L
+        val recoveryMillis = snapshot.reportTimeMillis + recoveryMinutes * 60_000
+        val recoveryTime = Instant.ofEpochMilli(recoveryMillis)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDateTime()
+        val remainMinutes = ((recoveryMillis - System.currentTimeMillis()) / 60_000)
+            .coerceAtLeast(0)
+        val rh = remainMinutes / 60
+        val rm = remainMinutes % 60
+        val remainStr = buildString {
+            if (rh > 0) append("${rh}h ")
+            append("${rm}m")
+        }
+
+        append("\n")
+        append(
+            str(
+                "SanityRecovery",
+                recoveryTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
+                remainStr
+            )
+        )
+        // TODO: 延迟定时提醒（理智恢复前 6 分钟推送通知）
     }
 
     /** Core 写在 details.details.error；WPF 读的是根级 error，两处都兼容 */

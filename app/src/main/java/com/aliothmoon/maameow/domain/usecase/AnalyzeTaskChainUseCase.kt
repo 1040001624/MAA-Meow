@@ -40,7 +40,7 @@ class AnalyzeTaskChainUseCase(
     private val relocatePath: (String) -> String = { it },
 ) {
     /**
-     * 先等 depot/operBox 分片装载；config 的 toTaskParams 仍是非 suspend。
+     * 先等 depot/operBox 分片装载；config 的 toTaskParams 仍是非 suspend
      *
      * @param fromNodeId 从此节点起运行，之前的节点本轮跳过；节点未启用则顺延到其后首个启用的
      */
@@ -51,14 +51,15 @@ class AnalyzeTaskChainUseCase(
         depotRepository.isLoaded.first { it }
         operBoxRepository.isLoaded.first { it }
 
-        val enabled = chain.filter { it.enabled }.sortedBy { it.order }
-        val nodes = enabled.startingFrom(chain, fromNodeId)
-        if (nodes.isEmpty()) {
+        // 链级前提看 chainNodes，本轮实际下发的任务看 runNodes
+        val chainNodes = chain.filter { it.enabled }.sortedBy { it.order }
+        val runNodes = chainNodes.startingFrom(chain, fromNodeId)
+        if (runNodes.isEmpty()) {
             return AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.NO_TASK_SELECTED,
             )
         }
-        val list = getWakeUpClientTypeList(enabled)
+        val list = getWakeUpClientTypeList(chainNodes)
         if (list.size > 1) {
             return AnalyzeTaskChainResult.Blocked(
                 reason = AnalyzeTaskChainFailureReason.CONFLICTING_CLIENT_TYPES,
@@ -68,7 +69,7 @@ class AnalyzeTaskChainUseCase(
 
 
         // 被跳过的理智作战下次仍要用「上次」关卡，借助战按整条链判断
-        val info = MallCreditFightAvailability.resolve(enabled, activityManager)
+        val info = MallCreditFightAvailability.resolve(chainNodes, activityManager)
 
         dropsRefresher.clear()
 
@@ -84,7 +85,7 @@ class AnalyzeTaskChainUseCase(
         val sideTasks = mutableListOf<PlanSideTask>()
 
         val serverDayOfWeek = ServerTimezone.getYjDayOfWeek(clientType)
-        val expanded = nodes.flatMap { node ->
+        val expanded = runNodes.flatMap { node ->
             if (isSkippedByWeeklySchedule(node, serverDayOfWeek)) {
                 return@flatMap emptyList()
             }
@@ -125,11 +126,11 @@ class AnalyzeTaskChainUseCase(
 
         return AnalyzeTaskChainResult.Ready(
             TaskChainPlan(
-                nodes = nodes,
+                nodes = runNodes,
                 params = params,
                 clientType = clientType,
                 gamePackageName = Packages[clientType],
-                launchesGame = nodes
+                launchesGame = runNodes
                     .mapNotNull { it.config as? WakeUpConfig }
                     .any { it.startGameEnabled },
                 logs = logs,

@@ -381,7 +381,6 @@ private fun TaskManagementView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 跳过之前的任务，对齐 WPF 任务列表右键「从此处运行」
         OutlinedButton(
             onClick = onRunFromHere,
             enabled = canRunFromHere,

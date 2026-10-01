@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -38,7 +39,6 @@ fun <T> SelectableChipGroup(
     enabled: Boolean = true,
     isItemEnabled: (T) -> Boolean = { true },
     labelFontWeight: FontWeight? = null,
-    /** 文案前的图标位，如物品图标 */
     leading: (@Composable (T) -> Unit)? = null,
 ) {
     Column(
@@ -82,26 +82,21 @@ fun <T> SelectableChipGroup(
                     color = chipColor,
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    if (leading == null) {
+                    Row(
+                        // 带图标时收紧，图标本身已撑出高度
+                        modifier = Modifier.padding(
+                            if (leading == null) PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            else PaddingValues(start = 8.dp, top = 4.dp, end = 12.dp, bottom = 4.dp)
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        leading?.invoke(value)
                         Text(
                             text = displayName,
                             style = MaterialTheme.typography.bodySmall,
-                            color = textColor,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            color = textColor
                         )
-                    } else {
-                        Row(
-                            modifier = Modifier.padding(start = 8.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            leading(value)
-                            Text(
-                                text = displayName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = textColor
-                            )
-                        }
                     }
                 }
             }
