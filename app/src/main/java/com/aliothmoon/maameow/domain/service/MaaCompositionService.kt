@@ -216,6 +216,9 @@ class MaaCompositionService(
         /** 远程后端（Shizuku/Root）不可用或无法获取，任务拒绝启动 */
         data class RemoteAccessUnavailable(val backend: RemoteBackend) : StartResult()
 
+        /** 后端在运行但没授权；授权只能由用户在界面上完成，启动链路不代为请求 */
+        data class RemoteAccessNotGranted(val backend: RemoteBackend) : StartResult()
+
         /** 已有任务在启动/运行/停止，拒绝重入 */
         data object AlreadyRunning : StartResult()
     }
@@ -352,6 +355,12 @@ class MaaCompositionService(
                 return@withLock
             }
         }
+        // 没授权时加载必然失败，useRemoteService 还会自己发起一次授权请求
+        val access = RemoteAccessCoordinator.refresh()
+        if (!access.isGranted(access.configuredBackend)) {
+            Timber.i("Skip resource prepare: %s not granted", access.configuredBackend)
+            return@withLock
+        }
         // 可能在主线程调用，解绑是同步 binder 调用
         withContext(Dispatchers.IO) {
             resourceLoader.ensureLoaded(clientType)
@@ -381,6 +390,14 @@ class MaaCompositionService(
                 context.getString(R.string.runlog_backend_unavailable, backend.display),
                 "BACKEND_UNAVAILABLE",
                 StartResult.RemoteAccessUnavailable(backend)
+            )
+        }
+        // 必须早于资源加载：未授权走到 useRemoteService 会等授权弹窗超时，失败还被报成资源错误
+        if (!access.isGranted(backend)) {
+            return rejectStart(
+                context.getString(R.string.runlog_backend_not_granted, backend.display),
+                "BACKEND_NOT_GRANTED",
+                StartResult.RemoteAccessNotGranted(backend)
             )
         }
 

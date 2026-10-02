@@ -1744,6 +1744,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="task_start_error_service_connecting">Service is starting up, please try again in a moment</string>
     <string name="task_start_error_already_running">A task is already starting, running, or stopping</string>
     <string name="task_start_error_backend_unavailable">%1$s is unavailable. Start the service and grant permission before starting tasks</string>
+    <string name="task_start_error_backend_not_granted">%1$s is not authorized. Grant permission on the Home page before starting tasks</string>
     <string name="task_start_error_maa_create_instance">MaaCore initialization failed. Restart the app</string>
     <string name="task_start_error_set_touch_mode">Failed to set touch mode. Restart the app</string>
     <string name="task_start_error_portrait_orientation">The screen is in portrait mode. Switch to landscape before starting</string>
@@ -2405,6 +2406,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="runlog_copilot_started">Auto-battle started</string>
     <string name="runlog_service_connecting">Service is starting, please try again later</string>
     <string name="runlog_backend_unavailable">%1$s is unavailable; start canceled</string>
+    <string name="runlog_backend_not_granted">%1$s is not authorized; start canceled</string>
     <string name="runlog_resource_load_failed">Failed to load resources</string>
     <string name="runlog_portrait_orientation">Currently in portrait mode; foreground mode requires landscape</string>
     <string name="runlog_invalid_aspect_ratio">Current resolution %1$dx%2$d is not 16:9; cannot run in foreground mode</string>

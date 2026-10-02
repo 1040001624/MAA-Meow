@@ -9,6 +9,7 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +46,26 @@ class ShizukuReadinessProvider(
         scope = scope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = ShizukuReadiness(),
+    )
+
+    /**
+     * 不看 skipShizukuCheck 的判定，供用户主动点出来的一次性引导使用
+     *
+     * 冷流：只在引导弹窗开着时才付 checkStatus 的开销
+     */
+    val unskipped: Flow<ShizukuReadiness> = combine(
+        RemoteAccessCoordinator.state,
+        appSettings.shizukuLaunchPackage,
+        refreshTrigger,
+    ) { remoteState, launchPackage, _ ->
+        resolve(remoteState, launchPackage, skipCheck = false)
+    }
+
+    /** 即时取一次 [unskipped]；先刷新后端状态，免得用到过期快照 */
+    suspend fun resolveUnskipped(): ShizukuReadiness = resolve(
+        RemoteAccessCoordinator.refresh(),
+        appSettings.shizukuLaunchPackage.value,
+        skipCheck = false,
     )
 
     private suspend fun resolve(

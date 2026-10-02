@@ -1800,6 +1800,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="task_start_error_service_connecting">服务正在启动中，请稍后再试</string>
     <string name="task_start_error_already_running">已有任务正在运行或停止中</string>
     <string name="task_start_error_backend_unavailable">%1$s不可用，请先启动对应服务并完成授权后再启动任务</string>
+    <string name="task_start_error_backend_not_granted">%1$s未授权，请先在首页完成授权后再启动任务</string>
     <string name="task_start_error_maa_create_instance">MaaCore 初始化失败，请重启应用</string>
     <string name="task_start_error_set_touch_mode">触控模式设置失败，请重启应用</string>
     <string name="task_start_error_portrait_orientation">当前屏幕为竖屏，请切换为横屏后启动</string>
@@ -2462,6 +2463,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="runlog_copilot_started">自动战斗开始运行</string>
     <string name="runlog_service_connecting">服务正在启动中，请稍后再试</string>
     <string name="runlog_backend_unavailable">%1$s 不可用，已取消启动</string>
+    <string name="runlog_backend_not_granted">%1$s 未授权，已取消启动</string>
     <string name="runlog_resource_load_failed">资源加载失败</string>
     <string name="runlog_portrait_orientation">当前为竖屏，无法在前台模式运行</string>
     <string name="runlog_invalid_aspect_ratio">当前分辨率 %1$dx%2$d 不是 16:9，无法在前台模式运行</string>

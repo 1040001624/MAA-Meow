@@ -12,24 +12,35 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
+import com.aliothmoon.maameow.manager.ShizukuReadiness
 import com.aliothmoon.maameow.manager.ShizukuReadinessProvider
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 
+/** 常驻引导：跟着 [ShizukuReadinessProvider.state] 走，关掉即写 skipShizukuCheck 全局不再提醒 */
+@Composable
+fun ShizukuReadinessGate(
+    readinessProvider: ShizukuReadinessProvider = koinInject(),
+) {
+    val readiness by readinessProvider.state.collectAsStateWithLifecycle()
+    ShizukuReadinessGuide(readiness = readiness)
+}
+
 /**
+ * 按给定判定渲染引导并接好各按钮动作，常驻引导与一次性引导共用
+ *
  * @param onDismiss   默认写 skipShizukuCheck 全局不再提醒；一次性引导传只收弹窗的实现
  * @param dismissText 覆盖否定按钮文案，配合一次性语义使用
  */
 @Composable
-fun ShizukuReadinessGate(
+fun ShizukuReadinessGuide(
+    readiness: ShizukuReadiness,
     onDismiss: (() -> Unit)? = null,
     dismissText: String? = null,
     permissionManager: PermissionManager = koinInject(),
     appSettingsManager: AppSettingsManager = koinInject(),
-    readinessProvider: ShizukuReadinessProvider = koinInject(),
 ) {
-    val readiness by readinessProvider.state.collectAsStateWithLifecycle()
     val launchPackage by appSettingsManager.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

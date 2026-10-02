@@ -12,6 +12,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.manager.ShizukuReadiness
 import com.aliothmoon.maameow.manager.ShizukuReadinessProvider
 import com.aliothmoon.maameow.presentation.LocalToaster
 import com.dokar.sonner.ToastType
@@ -20,10 +21,10 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Shizuku/Root 授权「去修复」的统一实现，供健康卡与触发日志共用
+ * Shizuku/Root 没就绪时「去修复」的统一实现，供任务页启动、健康卡与触发日志共用
  *
- * 与 [ShizukuReadinessGate] 只差关闭语义：那个是常驻引导，关掉即写 skipShizukuCheck
- * 全局不再提醒；这里是主动点出来的一次性弹窗，关掉不动全局设置
+ * 与 [ShizukuReadinessGate] 的差别：那个是常驻引导，关掉即写 skipShizukuCheck 全局不再提醒；
+ * 这里是用户主动点出来的一次性弹窗，勾了跳过检查也照样弹，关掉不动全局设置
  *
  * 用法：[rememberBackendReadyFixState] 拿状态，[BackendReadyFixHost] 渲染
  */
@@ -33,25 +34,27 @@ class BackendReadyFixState internal constructor(
     private val readinessProvider: ShizukuReadinessProvider,
     private val scope: CoroutineScope,
 ) {
-    internal var showDialog by mutableStateOf(false)
+    /** 非空即弹窗开着，值是点出来那一刻的判定，之后由 Host 跟进 */
+    internal var guidance by mutableStateOf<ShizukuReadiness?>(null)
         private set
 
     /** 置位后由 Host 弹提示并清零 */
     internal var stillNotReady by mutableStateOf(false)
 
     fun request() {
-        if (readinessProvider.state.value.needsGuidance) {
-            showDialog = true
-        } else {
-            // 引导覆盖不到时（勾了跳过检查、Root 后端、状态过期）直接请求，别静默空操作
-            scope.launch {
-                if (!permissionManager.requestRemoteAccess()) stillNotReady = true
+        scope.launch {
+            val readiness = readinessProvider.resolveUnskipped()
+            if (readiness.fixable) {
+                guidance = readiness
+            } else if (!permissionManager.requestRemoteAccess()) {
+                // 引导覆盖不到时（Root 后端、Sui）直接请求，别静默空操作
+                stillNotReady = true
             }
         }
     }
 
     internal fun dismiss() {
-        showDialog = false
+        guidance = null
     }
 }
 
@@ -90,15 +93,16 @@ fun BackendReadyFixHost(
         }
     }
 
-    if (!state.showDialog) return
+    val initial = state.guidance ?: return
 
-    // 授权成功或切到 Root 后自行收起
-    val readiness by readinessProvider.state.collectAsStateWithLifecycle()
-    LaunchedEffect(readiness.needsGuidance) {
-        if (!readiness.needsGuidance) state.dismiss()
+    // 弹窗开着才收集；授权成功或切到 Root 后自行收起
+    val readiness by readinessProvider.unskipped.collectAsStateWithLifecycle(initialValue = initial)
+    LaunchedEffect(readiness.fixable) {
+        if (!readiness.fixable) state.dismiss()
     }
 
-    ShizukuReadinessGate(
+    ShizukuReadinessGuide(
+        readiness = readiness,
         onDismiss = { state.dismiss() },
         dismissText = stringResource(R.string.common_later),
     )

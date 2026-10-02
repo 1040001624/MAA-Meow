@@ -129,6 +129,7 @@ import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.BackendReadyFixHost
 import com.aliothmoon.maameow.presentation.components.LocalPageVisible
 import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.MaaWindowInsets
@@ -136,6 +137,7 @@ import com.aliothmoon.maameow.presentation.components.collectWhilePageVisible
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.LocalSettingRowBleed
 import com.aliothmoon.maameow.presentation.components.horizontalBleed
+import com.aliothmoon.maameow.presentation.components.rememberBackendReadyFixState
 import com.aliothmoon.maameow.presentation.components.rememberPageVisible
 import com.aliothmoon.maameow.presentation.components.rememberStagedBeyondViewportCount
 import com.aliothmoon.maameow.presentation.navigation.BottomNavTab
@@ -447,6 +449,9 @@ fun BackgroundTaskView(
     if (!onboardingBlocksStartupDialogs()) {
         ShizukuReadinessGate()
     }
+    // 点开始时后端没就绪的一次性引导，勾了跳过检查也弹
+    val backendFix = rememberBackendReadyFixState()
+    BackendReadyFixHost(backendFix)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -512,18 +517,14 @@ fun BackgroundTaskView(
                     ) {
                         val inputFocusManager = LocalInputFocusManager.current
                         // 启动按钮的两种「禁用态」：① 前台模式不从后台任务页启动；
-                        // ② 远程后端（Shizuku/Root）不可用。两者均显示为禁用态但仍可点击，
-                        // 点击给出对应提示（防呆），与领域层 checkPreconditions 守卫一致。
+                        // ② 远程后端（Shizuku/Root）没就绪，不可用或未授权。两者均显示为禁用态但仍可点击，
+                        // 点击给出对应提示或引导（防呆），与领域层 checkPreconditions 守卫一致。
                         val foregroundBlocked = runMode == RunMode.FOREGROUND
-                        val backendBlocked =
-                            !permissionState.isStartupBackendAvailable(permissionState.startupBackend)
+                        // 不可用时授权必为 false，一个判断盖住两种情况
+                        val backendBlocked = !permissionState.remoteAccessGranted
                         val startBlocked = foregroundBlocked || backendBlocked
                         val switchBackgroundModeMessage =
                             stringResource(R.string.navigation_toast_switch_background_mode)
-                        val backendUnavailableMessage = stringResource(
-                            R.string.home_toast_backend_unavailable,
-                            permissionState.startupBackend.display
-                        )
                         // 所有启动入口共用，新入口别绕开
                         val guardedStart: (() -> Unit) -> Unit = { start ->
                             inputFocusManager.clear()
@@ -531,8 +532,7 @@ fun BackgroundTaskView(
                                 foregroundBlocked ->
                                     Toast.makeText(context, switchBackgroundModeMessage, Toast.LENGTH_SHORT).show()
 
-                                backendBlocked ->
-                                    Toast.makeText(context, backendUnavailableMessage, Toast.LENGTH_SHORT).show()
+                                backendBlocked -> backendFix.request()
 
                                 else -> start()
                             }

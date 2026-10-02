@@ -25,4 +25,10 @@ data class ShizukuReadiness(
     /** 是否需要向用户展示引导弹窗 */
     val needsGuidance: Boolean
         get() = stage != ShizukuReadinessStage.Ready
+
+    /** 有没有用户能照着做的修复步骤；Sui 那条只是兼容性告知，不算 */
+    val fixable: Boolean
+        get() = stage == ShizukuReadinessStage.NotInstalled ||
+                stage == ShizukuReadinessStage.NotRunning ||
+                stage == ShizukuReadinessStage.NeedAuth
 }
