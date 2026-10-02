@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
+import com.aliothmoon.maameow.schedule.model.ExecutionResult
 
 /** 全部方法可在任意线程调用且不阻塞；开关关着或构建没带 DSN 时空转 */
 interface RunTelemetry {
@@ -20,7 +21,23 @@ interface RunTelemetry {
 
     /** [state] 须是置 ERROR 之前的执行状态 */
     fun onServiceDied(state: MaaExecutionState)
+
+    /** 定时或外部触发的一次启动收尾，成功与否都调；哪些结果算故障由实现筛 */
+    fun onLaunchFinished(outcome: LaunchOutcome)
 }
+
+data class LaunchOutcome(
+    val result: ExecutionResult,
+    /** 终局文案的英文模板，不随界面语言和参数变，用来归类；没有文案时为 null */
+    val reason: String?,
+    /** 按界面语言解析好的完整文案 */
+    val message: String?,
+    /** 实际触发比计划时间晚了多少；非定时触发没有计划时间 */
+    val delayMs: Long?,
+    val runMode: String,
+    /** 触发日志相对 debug 目录的路径 */
+    val logFile: String,
+)
 
 enum class RunKind(val value: String) {
     CHAIN("chain"),

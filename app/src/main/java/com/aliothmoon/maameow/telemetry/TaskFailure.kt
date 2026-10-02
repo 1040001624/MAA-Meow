@@ -188,6 +188,41 @@ internal data class ServiceDeath(
     }
 }
 
+/** 定时或外部触发的启动没走到任务开跑：校验没过、界面拉不起来、解不了锁、启动失败 */
+internal data class LaunchFailure(
+    /** 小写的结果名，如 `failed_ui_launch` */
+    val result: String,
+    /** 终局文案的英文模板，不随界面语言和参数变 */
+    val launchReason: String?,
+    val message: String?,
+    val delayMs: Long?,
+    /** 触发日志相对 debug 目录的路径，整份当证据带上 */
+    val logFile: String,
+    override val tags: Map<String, String> = emptyMap(),
+) : Incident {
+
+    override val runId: String? get() = null
+
+    override val reason: String get() = "launch_failure"
+
+    override val logAttributes: Map<String, String> get() = mapOf("launch.result" to result)
+
+    override fun toSentryEvent(): SentryEvent = SentryEvent().also { event ->
+        event.level = SentryLevel.ERROR
+        event.logger = RUN_LOGGER
+        event.transaction = LAUNCH_FAILURE_TRANSACTION
+        event.message = Message().apply {
+            formatted = "Maa launch failed: $result" + (launchReason?.let { " ($it)" } ?: "")
+        }
+        event.fingerprints = listOf(LAUNCH_FAILURE_FINGERPRINT, result, launchReason.orEmpty())
+        event.putTags(
+            tags + mapOf("launch.result" to result, "launch.reason" to launchReason.orEmpty(), "result" to "failure")
+        )
+        message?.let { event.setExtra("launch.message", it) }
+        delayMs?.let { event.setExtra("launch.delay_ms", it) }
+    }
+}
+
 /**
  * 证据带没带上、为什么没带，写进 `logs.*` 与 `attachment.*`
  *
@@ -238,11 +273,13 @@ private fun SentryEvent.putTags(tags: Map<String, String>) {
 internal const val TASK_FAILURE_TRANSACTION = "maameow.task.failure"
 internal const val START_FAILURE_TRANSACTION = "maameow.start.failure"
 internal const val SERVICE_DEATH_TRANSACTION = "maameow.service.died"
+internal const val LAUNCH_FAILURE_TRANSACTION = "maameow.launch.failure"
 private const val TASK_LOGGER = "maameow.task"
 private const val RUN_LOGGER = "maameow.run"
 private const val TASK_FAILURE_FINGERPRINT = "maameow-task-failure"
 private const val START_FAILURE_FINGERPRINT = "maameow-start-failure"
 private const val SERVICE_DEATH_FINGERPRINT = "maameow-service-died"
+private const val LAUNCH_FAILURE_FINGERPRINT = "maameow-launch-failure"
 
 /** 任务链没报过子任务错误就失败时的占位，与 MaaFwApp 同名 */
 internal const val UNOBSERVED_SUBTASK = "terminal_failure"

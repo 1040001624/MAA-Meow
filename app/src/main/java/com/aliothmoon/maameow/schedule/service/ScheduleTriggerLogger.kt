@@ -1,7 +1,10 @@
 package com.aliothmoon.maameow.schedule.service
 
 import android.content.Context
+import android.content.res.Configuration
 import com.aliothmoon.maameow.data.config.MaaPathConfig
+import com.aliothmoon.maameow.domain.service.LaunchOutcome
+import com.aliothmoon.maameow.domain.service.RunTelemetry
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.TriggerLogEntry
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -16,15 +19,18 @@ import java.io.FileWriter
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 class ScheduleTriggerLogger(
     private val pathConfig: MaaPathConfig,
     private val context: Context,
+    private val telemetry: RunTelemetry,
 ) {
 
     private companion object {
         private const val TAG = "TriggerLogger"
+        private const val LOG_DIR = "schedule"
         private const val LOG_PREFIX = "trigger_"
         private const val LOG_EXTENSION = ".log"
         private const val MAX_LOG_FILES = 100
@@ -34,7 +40,7 @@ class ScheduleTriggerLogger(
     private val json = JsonUtils.common
 
     private val logDir: File
-        get() = File(pathConfig.debugDir, "schedule").apply {
+        get() = File(pathConfig.debugDir, LOG_DIR).apply {
             if (!exists()) mkdirs()
         }
 
@@ -58,7 +64,12 @@ class ScheduleTriggerLogger(
             .format(FILE_DATE_FORMAT)
         val file = File(logDir, "$LOG_PREFIX$timeStr$LOG_EXTENSION")
         val writer = BufferedWriter(FileWriter(file, true))
-        val session = Session(writer)
+        val session = Session(
+            writer = writer,
+            logFile = "$LOG_DIR/${file.name}",
+            delayMs = (now - scheduledTimeMs).takeIf { scheduledTimeMs > 0L },
+            runMode = runMode,
+        )
         try {
             session.writeEntry(
                 TriggerLogEntry.Header(
@@ -195,8 +206,23 @@ class ScheduleTriggerLogger(
         }
     }
 
+    /** 归类用的文案键：取英文模板，不随界面语言变，也不带参数 */
+    private fun reasonKey(text: UiText?): String? = when (text) {
+        is UiText.Resource -> runCatching { englishResources.getString(text.resId) }.getOrNull()
+        is UiText.Joined -> text.parts.firstNotNullOfOrNull(::reasonKey)
+        else -> null
+    }
+
+    private val englishResources by lazy {
+        val configuration = Configuration(context.resources.configuration).apply { setLocale(Locale.ENGLISH) }
+        context.createConfigurationContext(configuration).resources
+    }
+
     inner class Session internal constructor(
         private val writer: BufferedWriter,
+        private val logFile: String,
+        private val delayMs: Long?,
+        private val runMode: String,
     ) {
         private val closed = AtomicBoolean(false)
 
@@ -232,6 +258,17 @@ class ScheduleTriggerLogger(
                 }
                 purgeLogs()
             }
+            // 每一次触发的终局都从这里过，遥测只在这一处接
+            telemetry.onLaunchFinished(
+                LaunchOutcome(
+                    result = result,
+                    reason = reasonKey(message),
+                    message = resolveMessage(message),
+                    delayMs = delayMs,
+                    runMode = runMode,
+                    logFile = logFile,
+                )
+            )
         }
 
         internal fun writeEntry(entry: TriggerLogEntry) {

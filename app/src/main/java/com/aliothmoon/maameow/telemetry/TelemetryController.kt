@@ -12,6 +12,7 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.MaaCoreVersion
 import com.aliothmoon.maameow.domain.models.RunMode
+import com.aliothmoon.maameow.domain.service.LaunchOutcome
 import com.aliothmoon.maameow.domain.service.RunKind
 import com.aliothmoon.maameow.domain.service.RunTelemetry
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -19,6 +20,7 @@ import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import io.sentry.Attachment
 import io.sentry.Hint
 import io.sentry.Sentry
@@ -91,6 +93,7 @@ class TelemetryController(
 
     /** 取值不随开关变，重新初始化不必再查一遍 ActivityManager */
     private val hardware by lazy { TelemetryHardware.collect(context) }
+    private val rom by lazy { TelemetryRom.detect() }
 
     /** 须在设置读完盘之后调：读盘前开关还是默认值，照着初始化会绕过用户的关闭 */
     fun setup() {
@@ -164,6 +167,26 @@ class TelemetryController(
                 backend = RemoteAccessCoordinator.configuredBackend().name.lowercase(),
                 taskChain = tracer.currentTaskChain,
                 tags = tracer.tags,
+            )
+        }
+    }
+
+    override fun onLaunchFinished(outcome: LaunchOutcome) {
+        if (!active || outcome.result !in REPORTED_LAUNCH_RESULTS) return
+        // 没走到开跑，tag 还是上次刷的；取证要等半秒，赶得上
+        scope.launch { runCatching { refreshRunTags() } }
+        // 不动追踪状态：这时任务还没开跑，没有哪一轮可收
+        guarded {
+            if (!active) return@guarded
+            reporter.report(
+                LaunchFailure(
+                    result = outcome.result.name.lowercase(),
+                    launchReason = outcome.reason,
+                    message = outcome.message,
+                    delayMs = outcome.delayMs,
+                    logFile = outcome.logFile,
+                    tags = mapOf("run_mode" to outcome.runMode.lowercase()),
+                )
             )
         }
     }
@@ -263,6 +286,8 @@ class TelemetryController(
         Sentry.setUser(User().apply { id = TelemetryUserId.get(context) })
         Sentry.setTag("build_type", BuildConfig.BUILD_TYPE)
         Sentry.setTag("maacore.version", MaaCoreVersion.current.ifBlank { "unknown" })
+        Sentry.setTag("rom", rom.name)
+        if (rom.version.isNotBlank()) Sentry.setTag("rom.version", rom.version)
         Sentry.configureScope { it.setContexts("hardware", hardware) }
         refreshRunTags()
     }
@@ -318,6 +343,14 @@ class TelemetryController(
             MaaExecutionState.STARTING,
             MaaExecutionState.RUNNING,
             MaaExecutionState.STOPPING,
+        )
+
+        /** 正忙跳过与用户取消是正常结果，不报 */
+        val REPORTED_LAUNCH_RESULTS = setOf(
+            ExecutionResult.FAILED_VALIDATION,
+            ExecutionResult.FAILED_START,
+            ExecutionResult.FAILED_UI_LAUNCH,
+            ExecutionResult.SKIPPED_LOCKED,
         )
 
         /**

@@ -12,6 +12,7 @@ The setting is **Settings → Third-party services → Help improve this project
 | Task failure | A task chain fails | The failing subtask and the recognition node it was stuck on; the logs of that task; in background mode, also the game screenshot MaaCore saved on failure |
 | Start failure | Resource loading, instance creation, virtual display or connection fails | The failing stage; the logs of that run |
 | Service death | The Shizuku / Root process exits unexpectedly during a run | The task chain that was running; the logs of that run and MaaCore's `crash.log` |
+| Scheduled launch failure | A scheduled or externally triggered launch never reaches the tasks: validation fails, the UI cannot be brought up, the device cannot be unlocked, or the start fails | The result and reason, how late the trigger fired, and the trigger log of that attempt |
 | App crash | Uncaught Java exception | Stack trace |
 | App not responding | The system reports an ANR because the main thread is blocked | Stack traces of the app's threads |
 | Activity | App goes to foreground or background | Session start and end, used for daily active users and crash rate |
@@ -24,7 +25,8 @@ Every record carries:
 - App version, MaaCore version, resource version and build type
 - Client type, game version, run mode, background resolution and data location
 - Elevation backend, whether Shizuku runs as root or adb, and whether the app is exempt from battery optimization
-- Device model, OS version, SoC, total memory and ABI
+- Whether each of four behavior-changing switches is on: MAA task override, force fullscreen on the virtual display, deploy-with-pause, and hardware screen-off
+- Device model, OS version, vendor ROM name and version, SoC, total memory and ABI
 - The device and OS information the Sentry SDK adds on its own: battery level, free memory and storage, screen size, language and time zone, connection type, whether the device is rooted, and similar
 
 ## What is not sent
@@ -36,9 +38,10 @@ Every record carries:
 - No view hierarchy, tap or navigation trail, network request trail, or system event trail (screen on/off, battery, connectivity changes) is collected
 - No IP address: default PII is disabled in the SDK and IP storage is disabled in the Sentry project
 
-Two things redaction cannot remove:
+Three things redaction cannot remove:
 
 - MaaCore logs contain recognition results, which may include in-game friend names
 - The failure screenshot is the game screen on the virtual display at that moment, which may show your Doctor name and level
+- The trigger log sent with a scheduled launch failure contains the names you gave that schedule and its task profile
 
 Turn off "Help improve this project" if you are not comfortable with that.

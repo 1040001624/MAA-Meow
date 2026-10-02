@@ -192,6 +192,29 @@ class TaskFailureTest {
         assertEquals("running", event.tags?.get("run.state"))
     }
 
+    @Test
+    fun `触发启动失败按结果与文案模板分组`() {
+        val event = LaunchFailure(
+            result = "failed_start",
+            launchReason = "Launch exception: %1\$s",
+            message = "启动异常：boom",
+            delayMs = 1_500,
+            logFile = "schedule/trigger_20261002_110000_000.log",
+            tags = mapOf("run_mode" to "background"),
+        ).toSentryEvent()
+
+        assertEquals("Maa launch failed: failed_start (Launch exception: %1\$s)", event.message?.formatted)
+        assertEquals(
+            listOf("maameow-launch-failure", "failed_start", "Launch exception: %1\$s"),
+            event.fingerprints,
+        )
+        assertEquals("failed_start", event.tags?.get("launch.result"))
+        assertEquals("background", event.tags?.get("run_mode"))
+        assertEquals("启动异常：boom", event.extras?.get("launch.message"))
+        assertEquals(1_500L, event.extras?.get("launch.delay_ms"))
+        assertEquals(LAUNCH_FAILURE_TRANSACTION, event.transaction)
+    }
+
     private fun evidenceExtras(evidence: Evidence): Map<String, Any?> =
         failure.toSentryEvent().apply { setEvidence(evidence) }.extras.orEmpty()
             .filterKeys { it.startsWith("logs.") || it.startsWith("attachment.") }

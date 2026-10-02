@@ -186,6 +186,29 @@ class IncidentReporterTest {
         assertEquals(AttachmentOutcome.NotSelected, evidence.attachment)
     }
 
+    /** 触发日志一次一个文件，不需要开跑快照，整份带上 */
+    @Test
+    fun `触发启动失败带上整份触发日志`() = runTest(dispatcher) {
+        val reporter = reporter()
+        write("asst.log", "unrelated\n")
+        write("schedule/trigger_20261002_110000_000.log", "{\"type\":\"header\"}\n{\"type\":\"footer\"}\n")
+        reporter.report(
+            LaunchFailure(
+                result = "failed_ui_launch",
+                launchReason = "Failed to launch UI",
+                message = "界面拉起失败",
+                delayMs = 2_000,
+                logFile = "schedule/trigger_20261002_110000_000.log",
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf("schedule/trigger_20261002_110000_000.log"), sources())
+        assertEquals("schedule", evidence.logs?.entries?.single()?.kind)
+        assertEquals("{\"type\":\"header\"}\n{\"type\":\"footer\"}\n", evidence.logs?.entries?.single()?.content)
+        assertEquals(AttachmentOutcome.NotSelected, evidence.attachment)
+    }
+
     @Test
     fun `一次任务失败用掉这个任务的快照`() = runTest(dispatcher) {
         val reporter = reporter()

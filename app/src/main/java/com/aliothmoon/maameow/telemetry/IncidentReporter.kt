@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.telemetry
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -62,8 +63,14 @@ internal class IncidentReporter(
 
     fun report(incident: Incident) {
         val failure = incident as? TaskFailure
-        // 任务失败只看这个任务期间的；启动失败与进程死亡看整轮的
-        val start = if (failure != null) taskStart.also { taskStart = null } else runStart
+        val start = when (incident) {
+            // 任务失败只看这个任务期间的
+            is TaskFailure -> taskStart.also { taskStart = null }
+            // 触发日志一次一个文件，整份都是这次的
+            is LaunchFailure -> CompletableDeferred(wholeFile(incident.logFile))
+            // 启动失败与进程死亡看整轮的
+            else -> runStart
+        }
         val withImages = failure != null && imagesAllowed() &&
             shouldSampleAttachment(failure.runId, failure.taskId.toLong(), attachmentSampleRate)
         scope.launch(workers + io) {
@@ -137,6 +144,13 @@ internal class IncidentReporter(
         val APP_LOG = EvidenceFile("error_logs/error.log", kind = "app", core = false)
 
         fun taskFiles(session: EvidenceFile?): List<EvidenceFile> = listOfNotNull(CORE_LOG, session, APP_LOG)
+
+        /** 基线长度记 0，取证时整份算新写的 */
+        fun wholeFile(path: String) = EvidenceStart(
+            files = listOf(EvidenceFile(path, kind = "schedule", core = false)),
+            lengths = mapOf(path to 0L),
+            images = null,
+        )
 
         /** Core 的崩溃现场与启动诊断日志体积小却最要紧，排在前面免得被大日志挤掉 */
         fun runFiles(session: EvidenceFile?): List<EvidenceFile> = listOf(

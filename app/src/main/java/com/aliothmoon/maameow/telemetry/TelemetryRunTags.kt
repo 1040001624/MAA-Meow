@@ -35,6 +35,11 @@ internal object TelemetryRunTags {
         put("game.version", gameVersion(context, clientType))
         put("shizuku.identity", shizukuIdentity())
         put("battery_optimization", batteryOptimization(context))
+        // 会改变运行行为的设置；开了任务覆盖的识别失败多半是用户自己改的 tasks.json 所致
+        put("tasks_override", settings.tasksOverrideEnabled.value.toString())
+        put("force_fullscreen", settings.forceFullscreenOnVirtualDisplay.value.toString())
+        put("deploy_with_pause", settings.deployWithPause.value.toString())
+        put("hardware_screen_off", settings.useHardwareScreenOff.value.toString())
     }
 
     private fun gameVersion(context: Context, clientType: String): String {
