@@ -13,6 +13,7 @@ import com.aliothmoon.maameow.domain.service.RunTelemetry
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.CallbackJsonAbbreviator
+import com.aliothmoon.maameow.maa.CallbackLogPolicy
 import timber.log.Timber
 
 class MaaCallbackDispatcher(
@@ -35,7 +36,9 @@ class MaaCallbackDispatcher(
 
         // 用格式化参数而非字符串模板：模板会在调用前无条件拼接整份 json
         // （SubTaskExtraInfo 携带识别结果时可达数百 KB），而这里在回调热路径上
-        Timber.d("onEvent: msg=%s, json=%s", message, CallbackJsonAbbreviator.abbreviate(json))
+        if (CallbackLogPolicy.shouldLog(msg)) {
+            Timber.d("onEvent: msg=%s, json=%s", message, CallbackJsonAbbreviator.abbreviate(json))
+        }
 
         // 解析 JSON details
         val details: JSONObject? = try {

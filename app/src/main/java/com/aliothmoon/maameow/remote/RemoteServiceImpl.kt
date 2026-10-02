@@ -13,12 +13,14 @@ import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.bridge.NativeBridgeLib
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.DisplayMode
+import com.aliothmoon.maameow.constant.MaaFiles
 import com.aliothmoon.maameow.maa.InputControlUtils
 import com.aliothmoon.maameow.remote.internal.ActivityUtils
 import com.aliothmoon.maameow.remote.internal.CoreDataStore
 import com.aliothmoon.maameow.remote.internal.GameAudioMuteController
 import com.aliothmoon.maameow.remote.internal.GameFpsMonitor
 import com.aliothmoon.maameow.remote.internal.GestureRecorder
+import com.aliothmoon.maameow.remote.internal.LogcatRetention
 import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
@@ -168,9 +170,19 @@ class RemoteServiceImpl : RemoteService.Stub() {
             Ln.i("MaaCore ${AsstGetVersion()} userDir=$dir")
         }
         PermissionGrantHelper.disablePhantomProcessKiller()
+        pruneLogcatCaptures(dir)
         setup = true
         RemoteBootTrace.mark("SETUP_DONE")
         return SetupResult.OK
+    }
+
+    /** 放在这里而非 logcat 进程：调试模式关掉后不再起 logcat 进程，旧文件也得有人收 */
+    private fun pruneLogcatCaptures(userDir: File) {
+        Thread {
+            runCatching { LogcatRetention.prune(File(userDir, "${MaaFiles.DEBUG}/logcat")) }
+                .onSuccess { if (it > 0) Ln.i("$TAG: pruned $it old logcat captures") }
+                .onFailure { Ln.w("$TAG: prune logcat captures failed: ${it.message}") }
+        }.apply { name = "logcat-prune"; isDaemon = true }.start()
     }
 
     override fun test(map: MutableMap<String, String>) {

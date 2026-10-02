@@ -7,6 +7,7 @@ import android.graphics.Point
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.system.Os
 import android.view.WindowManager
 import androidx.core.content.FileProvider
 import com.aliothmoon.maameow.BuildConfig
@@ -31,8 +32,10 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.FilterOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -123,7 +126,9 @@ class LogExportService(
         baseDir: File,
         settingsSnapshot: String?,
     ) {
-        ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
+        // 夹在 zip 与文件之间，量的是压缩后字节
+        val counter = CountingOutputStream(BufferedOutputStream(FileOutputStream(zipFile)))
+        ZipOutputStream(counter).use { zos ->
             try {
                 val process = Runtime.getRuntime().exec("getprop")
                 zos.putNextEntry(ZipEntry("properties.txt"))
@@ -154,18 +159,40 @@ class LogExportService(
                 }
             }
 
-            appendRemoteDebugFiles(zos)
+            // 截图压不动，留到最后按剩余预算装；日志不裁，asst.log 刚轮转完时现场全在 asst.bak.log 里
+            val screenshots = mutableListOf<Screenshot>()
+            appendRemoteDebugFiles(zos, screenshots)
 
             // 提权进程写的文件可能对 App 不可读，逐个跳过，不拖垮整包
             val skipped = mutableListOf<String>()
             for (file in logFiles) {
                 val name = file.relativeTo(baseDir).path
+                if (LogExportCollector.isScreenshot(name)) {
+                    screenshots += Screenshot(name, file.length(), file.lastModified()) { FileInputStream(file) }
+                    continue
+                }
                 try {
                     FileInputStream(file).use { zos.addEntry(name, it, file.lastModified()) }
                 } catch (e: IOException) {
                     Timber.w(e, "Skip unreadable log file: %s", name)
                     skipped += "$name: ${e.message}"
                 }
+            }
+
+            val (fit, dropped) = LogExportCollector.fitScreenshots(
+                screenshots, counter.count, Screenshot::name, Screenshot::size, Screenshot::lastModified,
+            )
+            for (shot in fit) {
+                try {
+                    shot.open()?.use { zos.addEntry(shot.name, it, shot.lastModified) }
+                } catch (e: IOException) {
+                    Timber.w(e, "Skip unreadable screenshot: %s", shot.name)
+                    skipped += "${shot.name}: ${e.message}"
+                }
+            }
+            if (dropped.isNotEmpty()) {
+                Timber.i("Export budget reached, dropped %d older screenshots", dropped.size)
+                dropped.forEach { skipped += "${it.name}: over export size budget" }
             }
             if (skipped.isNotEmpty()) {
                 zos.addEntry("export_skipped.txt", skipped.joinToString("\n").byteInputStream())
@@ -179,7 +206,7 @@ class LogExportService(
         closeEntry()
     }
 
-    private fun appendRemoteDebugFiles(zos: ZipOutputStream) {
+    private fun appendRemoteDebugFiles(zos: ZipOutputStream, screenshots: MutableList<Screenshot>) {
         // core 用 App 目录时它的日志就在 App 的 debug/ 里，已被 collect 收进去
         if (!pathConfig.isCoreSeparated) return
         val srv = RemoteServiceManager.getInstanceOrNull()
@@ -190,13 +217,54 @@ class LogExportService(
         val files = runCatching { srv.listCoreDebugFiles() }
             .onFailure { Timber.w(it, "listCoreDebugFiles failed") }
             .getOrNull() ?: return
+        val now = System.currentTimeMillis()
         for (rel in files) {
             try {
+                val name = "${MaaFiles.EXPORT_REMOTE_DIR}/$rel"
                 val pfd = srv.openCoreDebugFile(rel) ?: continue
-                ParcelFileDescriptor.AutoCloseInputStream(pfd).use { zos.addEntry("${MaaFiles.EXPORT_REMOTE_DIR}/$rel", it) }
+                if (LogExportCollector.isAlwaysExported(rel)) {
+                    ParcelFileDescriptor.AutoCloseInputStream(pfd).use { zos.addEntry(name, it) }
+                    continue
+                }
+                // 取不到属性就当新文件带上
+                val stat = runCatching { Os.fstat(pfd.fileDescriptor) }.getOrNull()
+                val modified = stat?.let { it.st_mtime * 1000 } ?: now
+                when {
+                    !LogExportCollector.isFresh(rel, modified, now) -> pfd.close()
+                    LogExportCollector.isScreenshot(rel) -> {
+                        pfd.close()
+                        screenshots += Screenshot(name, stat?.st_size ?: 0L, modified) {
+                            srv.openCoreDebugFile(rel)?.let { ParcelFileDescriptor.AutoCloseInputStream(it) }
+                        }
+                    }
+
+                    else -> ParcelFileDescriptor.AutoCloseInputStream(pfd).use { zos.addEntry(name, it, modified) }
+                }
             } catch (e: Exception) {
                 Timber.w(e, "Failed to pull core debug file: %s", rel)
             }
+        }
+    }
+
+    private class Screenshot(
+        val name: String,
+        val size: Long,
+        val lastModified: Long,
+        val open: () -> InputStream?,
+    )
+
+    private class CountingOutputStream(out: OutputStream) : FilterOutputStream(out) {
+        var count = 0L
+            private set
+
+        override fun write(b: Int) {
+            out.write(b)
+            count++
+        }
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
+            out.write(b, off, len)
+            count += len
         }
     }
 

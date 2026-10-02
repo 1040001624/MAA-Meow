@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.data.resource.BackgroundImageStore
 import com.aliothmoon.maameow.domain.service.GameMuteCoordinator
+import com.aliothmoon.maameow.domain.service.MaaSessionLogger
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.koin.appModule
@@ -94,7 +95,10 @@ class MaaApplication : Application() {
         depotRepository.start()
         operBoxRepository.start()
         cleanCachedUpdateApks()
-        applicationScope.launch { crashHandler.cleanOldCrashLogs() }
+        applicationScope.launch {
+            crashHandler.cleanOldCrashLogs()
+            get<MaaSessionLogger>().cleanupOldLogs()
+        }
         doSyncScheduleAlarms()
     }
 

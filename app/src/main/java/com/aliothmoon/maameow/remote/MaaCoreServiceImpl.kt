@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.MaaCoreCallback
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.maa.AsstApiCallback
 import com.aliothmoon.maameow.maa.CallbackJsonAbbreviator
+import com.aliothmoon.maameow.maa.CallbackLogPolicy
 import com.aliothmoon.maameow.maa.MaaCoreLibrary
 import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
 import com.aliothmoon.maameow.third.Ln
@@ -37,7 +38,9 @@ class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub
      */
     private val nativeRef = AsstApiCallback { msg, json, _ ->
         val forwarded = runCatching { callback.get()?.onCallback(msg, json) }
-        Ln.i("$TAG: Callback: $msg, ${CallbackJsonAbbreviator.abbreviate(json)}")
+        if (CallbackLogPolicy.shouldLog(msg)) {
+            Ln.i("$TAG: Callback: $msg, ${CallbackJsonAbbreviator.abbreviate(json)}")
+        }
         forwarded.onFailure {
             // 转发失败是静默的行为改变（丢掉 TaskChainStart → 目标库存不再重算），
             // 必须能在日志包里一眼看出是哪条消息掉了
