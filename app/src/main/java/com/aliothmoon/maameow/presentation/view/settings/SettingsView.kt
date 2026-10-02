@@ -856,7 +856,6 @@ fun SettingsView(
                             SettingSearchTarget(R.string.settings_telemetry) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_telemetry),
-                                    description = stringResource(R.string.settings_telemetry_desc),
                                     contentColor = contentColor,
                                     checked = telemetryEnabled,
                                     onCheckedChange = { viewModel.setTelemetryEnabled(it) }

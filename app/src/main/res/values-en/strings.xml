@@ -148,7 +148,6 @@
     <string name="settings_wake_unlock_type_gesture">Manual recording</string>
     <string name="settings_wake_swipe_desc">Turns the screen on and dismisses the lock screen directly. Works only when no password is set (no lock or swipe to enter). If a PIN, pattern or password is set, use Manual recording or PIN instead</string>
     <string name="settings_telemetry">Help improve this project</string>
-    <string name="settings_telemetry_desc">Send anonymous crash reports and task statistics. When a task fails, its run log and the error screenshot are attached to help find common problems</string>
     <string name="search_keywords_telemetry">telemetry statistics anonymous privacy report crash Sentry</string>
     <string name="settings_report_penguin">Report to Penguin Statistics</string>
     <string name="settings_report_penguin_desc">Upload battle drops and recruit tags to penguin-stats</string>
