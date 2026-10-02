@@ -81,6 +81,25 @@ object ActivityUtils {
         }
     }
 
+    /** API < Q 读不出任务在哪块屏上，只能拿「上次是我们把它拉到这块屏上的」当它占着屏的依据 */
+    @Volatile
+    private var lastLaunched: Pair<String, Int>? = null
+
+    /**
+     * 强杀 [packageName]；它占着 [displayId] 时等画面停稳并把帧缓冲换成黑帧
+     *
+     * 杀的不是屏上那个应用就不碰帧缓冲：屏上是别人的静止画面，换黑了不会自己回来
+     */
+    @JvmStatic
+    fun forceStop(packageName: String, displayId: Int) {
+        val occupiesDisplay = when (val current = getAppDisplayId(packageName)) {
+            null -> lastLaunched == (packageName to displayId)
+            else -> current == displayId
+        }
+        ServiceManager.getActivityManager().forceStopPackage(packageName)
+        if (occupiesDisplay) StaleFrameGuard.blankAfterKill(displayId, packageName)
+    }
+
     @JvmStatic
     @JvmOverloads
     fun startApp(
@@ -107,11 +126,42 @@ object ActivityUtils {
         intent.addFlags(flag)
 
         if (forceStop) {
-            ServiceManager.getActivityManager().forceStopPackage(packageName)
+            forceStop(packageName, displayId)
         }
         Ln.i("startApp ${intent.component?.flattenToShortString()}")
 
-        return startActivity(intent, displayId)
+        return startActivity(intent, displayId).also { started ->
+            if (started) lastLaunched = packageName to displayId
+        }
+    }
+
+    sealed interface DisplayOccupancy {
+        data class Occupied(val topPackage: String?) : DisplayOccupancy
+        data object Empty : DisplayOccupancy
+        data object Unknown : DisplayOccupancy
+    }
+
+    /**
+     * [displayId] 上有没有任务。API 不支持、任务表为空、有任务读不出 displayId 都算 [DisplayOccupancy.Unknown]：
+     * [StaleFrameGuard] 拿 Empty 当「画面已经没人画了」去换黑帧，把判不出当成空了，
+     * 一张不再重绘的静止界面就会一直黑下去
+     */
+    fun probeDisplay(displayId: Int): DisplayOccupancy {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return DisplayOccupancy.Unknown
+        if (taskDisplayIdField == null) return DisplayOccupancy.Unknown
+        return runCatching {
+            val am = FakeContext.get().getSystemService(ActivityManager::class.java)
+                ?: return DisplayOccupancy.Unknown
+            @Suppress("DEPRECATION")
+            val tasks = am.getRunningTasks(100)
+            val displayIds = tasks.map(::getTaskDisplayId)
+            val index = displayIds.indexOf(displayId)
+            when {
+                index >= 0 -> DisplayOccupancy.Occupied(tasks[index].topActivity?.packageName)
+                tasks.isEmpty() || displayIds.any { it < 0 } -> DisplayOccupancy.Unknown
+                else -> DisplayOccupancy.Empty
+            }
+        }.onFailure { Ln.w("probeDisplay: failed", it) }.getOrDefault(DisplayOccupancy.Unknown)
     }
 
     /**

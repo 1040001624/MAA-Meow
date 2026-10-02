@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.maa.AsstApiCallback
 import com.aliothmoon.maameow.maa.CallbackJsonAbbreviator
 import com.aliothmoon.maameow.maa.MaaCoreLibrary
+import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
 import com.aliothmoon.maameow.third.Ln
 import com.sun.jna.Memory
 import com.sun.jna.Pointer
@@ -89,6 +90,8 @@ class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub
     }
 
     override fun DestroyInstance() {
+        // 守卫线程拿实例句柄问 core 还在不在跑，先让它退出再销毁
+        StaleFrameGuard.stop()
         val handle = instance
 
         if (handle.get() != null && ctx != null) {
@@ -174,12 +177,15 @@ class MaaCoreServiceImpl(private val ctx: MaaCoreLibrary?) : MaaCoreService.Stub
     override fun Start(): Boolean {
         val core = requireMaaCore() ?: return false
         val handle = requireHandle() ?: return false
+        StaleFrameGuard.blankIfVacant()
         return core.AsstStart(handle).also {
             Ln.i("$TAG: Start() = $it")
+            if (it) StaleFrameGuard.start(::Running)
         }
     }
 
     override fun Stop(): Boolean {
+        StaleFrameGuard.stop()
         val core = requireMaaCore() ?: return false
         val handle = requireHandle() ?: return false
         return core.AsstStop(handle).also {

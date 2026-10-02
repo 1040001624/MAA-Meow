@@ -22,8 +22,10 @@ import com.aliothmoon.maameow.remote.internal.GestureRecorder
 import com.aliothmoon.maameow.remote.internal.PermissionGrantHelper
 import com.aliothmoon.maameow.remote.internal.PowerController
 import com.aliothmoon.maameow.remote.internal.PrimaryDisplayManager
+import com.aliothmoon.maameow.remote.internal.ProcessLiveness
 import com.aliothmoon.maameow.remote.internal.RemoteUtils
 import com.aliothmoon.maameow.remote.internal.ScreenManager
+import com.aliothmoon.maameow.remote.internal.StaleFrameGuard
 import com.aliothmoon.maameow.remote.internal.UserDirProbe
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
@@ -94,6 +96,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         Ln.i("$TAG: destroy()")
         InputControlUtils.setTouchCallback(null)
         GameFpsMonitor.stop()
+        StaleFrameGuard.stop()
         performEmergencyCleanup()
         exitProcess(0)
     }
@@ -366,6 +369,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
             DisplayMode.PRIMARY -> PrimaryDisplayManager.stop()
             DisplayMode.BACKGROUND -> {
                 GameFpsMonitor.stop()
+                StaleFrameGuard.stop()
                 PowerController.stopUserActivityKeepAlive()
                 VirtualDisplayManager.stop()
             }
@@ -384,26 +388,10 @@ class RemoteServiceImpl : RemoteService.Stub() {
         return ok
     }
 
-    override fun isAppAlive(packageName: String): Int {
-        return try {
-            val process = Runtime.getRuntime().exec(arrayOf("pidof", packageName))
-            val exitCode = process.waitFor()
-            val output = process.inputStream.bufferedReader().readText().trim()
-            val errorOutput = process.errorStream.bufferedReader().readText().trim()
-            when (exitCode) {
-                0 if output.isNotEmpty() -> AppAliveStatus.ALIVE
-                1 if output.isEmpty() && errorOutput.isEmpty() -> AppAliveStatus.DEAD
-                else -> {
-                    Ln.w(
-                        "$TAG: isAppAlive unexpected result for $packageName: exitCode=$exitCode, stdout=$output, stderr=$errorOutput"
-                    )
-                    AppAliveStatus.UNKNOWN
-                }
-            }
-        } catch (e: Exception) {
-            Ln.w("isAppAlive check failed for $packageName", e)
-            AppAliveStatus.UNKNOWN
-        }
+    override fun isAppAlive(packageName: String): Int = when (ProcessLiveness.pidof(packageName)) {
+        ProcessLiveness.ALIVE -> AppAliveStatus.ALIVE
+        ProcessLiveness.DEAD -> AppAliveStatus.DEAD
+        ProcessLiveness.UNKNOWN -> AppAliveStatus.UNKNOWN
     }
 
     override fun heartbeat(pid: Int) {

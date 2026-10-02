@@ -36,6 +36,17 @@ static jlong nativeGetFrameCount(JNIEnv *env, jclass clazz) {
     return static_cast<jlong>(GetFrameCount());
 }
 
+static jboolean nativeBlankFrame(JNIEnv *env, jclass clazz, jlong expectedFrameCount) {
+    (void) env;
+    (void) clazz;
+    const auto expected = static_cast<int64_t>(expectedFrameCount);
+    if (!BlankFrame(expected)) {
+        return JNI_FALSE;
+    }
+    BlankPreview(expected);
+    return JNI_TRUE;
+}
+
 static JNINativeMethod gMethods[] = {
         {"ping",                  "()Ljava/lang/String;",        reinterpret_cast<void *>(ping)},
         {"setupNativeCapturer",   "(II)Landroid/view/Surface;",  reinterpret_cast<void *>(nativeSetupNativeCapturer)},
@@ -43,6 +54,7 @@ static JNINativeMethod gMethods[] = {
         {"setPreviewSurface",     "(Ljava/lang/Object;)V",       reinterpret_cast<void *>(nativeSetPreviewSurface)},
         {"getFrameBufferBitmap",  "()Landroid/graphics/Bitmap;", reinterpret_cast<void *>(nativeGetFrameBufferBitmap)},
         {"getFrameCount",         "()J",                         reinterpret_cast<void *>(nativeGetFrameCount)},
+        {"blankFrame",            "(J)Z",                        reinterpret_cast<void *>(nativeBlankFrame)},
 };
 
 static constexpr char kNativeBridgeClass[] = "com/aliothmoon/maameow/bridge/NativeBridgeLib";
