@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -28,9 +30,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,8 +44,12 @@ import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.view.panel.common.bringIntoViewOnExpand
 import com.aliothmoon.maameow.theme.MaaThemeAlphas
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import kotlin.time.Duration.Companion.milliseconds
+
+private const val IME_SETTLE_MS = 350L
 
 @Composable
 fun CoreCharSelector(
@@ -172,136 +180,158 @@ fun CoreCharSelector(
             ExpandableTipContent(visible = tipExpanded, tipText = themeTip)
         }
 
-        // 输入框；头像跟已生效的配置值走，输入到一半不会跟着闪
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        val showNotFound = !isValid && !isValidating && inputText.isNotBlank()
+        val showSuggestionList = enabled && showSuggestions && filteredSuggestions.isNotEmpty()
+
+        // 键盘弹出后系统只把窗口推一次；之后提示与候选增减会把输入框挤到键盘下面，得重新请求
+        val inputAreaRequester = remember { BringIntoViewRequester() }
+        var inputFocused by remember { mutableStateOf(false) }
+        LaunchedEffect(inputFocused, showNotFound, showSuggestionList, filteredSuggestions) {
+            if (!inputFocused) return@LaunchedEffect
+            withFrameNanos { }
+            withFrameNanos { }
+            inputAreaRequester.bringIntoView()
+            delay(IME_SETTLE_MS.milliseconds)
+            inputAreaRequester.bringIntoView()
+        }
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .bringIntoViewRequester(inputAreaRequester)
+                .onFocusChanged { inputFocused = it.hasFocus }
         ) {
-            if (value.isNotBlank()) {
-                OperAvatarByName(
-                    name = value,
-                    modifier = Modifier.size(40.dp),
-                    resourceDataManager = resourceDataManager,
-                )
-            }
-            ITextField(
-                value = inputText,
-                onValueChange = { newValue ->
-                    handleInputChange(newValue)
-                },
-                placeholder = stringResource(R.string.core_char_selector_placeholder),
-                outlineColor = if (!isValid && !isValidating) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
-                modifier = Modifier.weight(1f),
-                enabled = enabled,
-                trailingIcon = if (enabled && (inputText.isNotEmpty() || recommendedChars.isNotEmpty())) {
-                    {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (inputText.isNotEmpty()) {
-                                IconButton(
-                                    onClick = { handleInputChange("") },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = stringResource(R.string.common_clear),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                            if (recommendedChars.isNotEmpty()) {
-                                IconButton(
-                                    onClick = {
-                                        showSuggestions = !showSuggestions
-                                        if (showSuggestions) {
-                                            filteredSuggestions = recommendedChars
-                                        }
-                                    },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (showSuggestions) {
-                                            Icons.Default.KeyboardArrowUp
-                                        } else {
-                                            Icons.Default.KeyboardArrowDown
-                                        },
-                                        contentDescription = stringResource(
-                                            if (showSuggestions) R.string.core_char_selector_collapse
-                                            else R.string.core_char_selector_recommended
+            // 输入框；头像跟已生效的配置值走，输入到一半不会跟着闪
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (value.isNotBlank()) {
+                    OperAvatarByName(
+                        name = value,
+                        modifier = Modifier.size(40.dp),
+                        resourceDataManager = resourceDataManager,
+                    )
+                }
+                ITextField(
+                    value = inputText,
+                    onValueChange = { newValue ->
+                        handleInputChange(newValue)
+                    },
+                    placeholder = stringResource(R.string.core_char_selector_placeholder),
+                    outlineColor = if (!isValid && !isValidating) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.weight(1f),
+                    enabled = enabled,
+                    trailingIcon = if (enabled && (inputText.isNotEmpty() || recommendedChars.isNotEmpty())) {
+                        {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (inputText.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { handleInputChange("") },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.common_clear),
+                                            modifier = Modifier.size(18.dp)
                                         )
-                                    )
+                                    }
+                                }
+                                if (recommendedChars.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = {
+                                            showSuggestions = !showSuggestions
+                                            if (showSuggestions) {
+                                                filteredSuggestions = recommendedChars
+                                            }
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (showSuggestions) {
+                                                Icons.Default.KeyboardArrowUp
+                                            } else {
+                                                Icons.Default.KeyboardArrowDown
+                                            },
+                                            contentDescription = stringResource(
+                                                if (showSuggestions) R.string.core_char_selector_collapse
+                                                else R.string.core_char_selector_recommended
+                                            )
+                                        )
+                                    }
                                 }
                             }
                         }
+                    } else {
+                        null
                     }
-                } else {
-                    null
-                }
-            )
-        }
-
-        // 错误提示 - 只有校验完成且失败时显示
-        if (!isValid && !isValidating && inputText.isNotBlank()) {
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer,
-                shape = RoundedCornerShape(4.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = stringResource(R.string.core_char_selector_not_found),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
-        }
 
-        // 建议列表
-        if (enabled && showSuggestions && filteredSuggestions.isNotEmpty()) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 150.dp)
-                    .bringIntoViewOnExpand(true)
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                LazyColumn {
-                    items(filteredSuggestions) { charName ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    // 从建议列表选择的干员一定是有效的
-                                    inputText = charName
-                                    showSuggestions = false
-                                    isValid = true
-                                    isValidating = false
-                                    // 立即更新配置
-                                    onValueChange(charName)
-                                }
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OperAvatarByName(
-                                name = charName,
-                                modifier = Modifier.size(28.dp),
-                                resourceDataManager = resourceDataManager,
-                            )
-                            Text(
-                                text = charName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (charName in recommendedChars) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                }
-                            )
+            // 错误提示 - 只有校验完成且失败时显示
+            if (showNotFound) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = stringResource(R.string.core_char_selector_not_found),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            // 建议列表
+            if (showSuggestionList) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 150.dp)
+                        .bringIntoViewOnExpand(true)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        ),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    LazyColumn {
+                        items(filteredSuggestions) { charName ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        // 从建议列表选择的干员一定是有效的
+                                        inputText = charName
+                                        showSuggestions = false
+                                        isValid = true
+                                        isValidating = false
+                                        // 立即更新配置
+                                        onValueChange(charName)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OperAvatarByName(
+                                    name = charName,
+                                    modifier = Modifier.size(28.dp),
+                                    resourceDataManager = resourceDataManager,
+                                )
+                                Text(
+                                    text = charName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (charName in recommendedChars) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                            }
                         }
                     }
                 }
