@@ -102,78 +102,76 @@ class MaaResourceLoader(
             }
             // 下发 LoadResource 即视为污染，中途失败也不例外
             loadedClientType = clientType
-            withContext(Dispatchers.IO) {
-                useRemoteService { srv ->
-                    val setupCode = srv.setup(pathConfig.coreRootDir, appSettings.debugMode.value)
-                    if (setupCode != SetupResult.OK) {
-                        val desc = SetupResult.describe(setupCode)
-                        val msg = "Remote setup failed: $desc"
-                        Timber.e("%s userDir=%s", msg, pathConfig.coreRootDir)
-                        val inaccessible = setupCode == SetupResult.ERR_USER_DIR_INACCESSIBLE
-                        _state.value = State.Failed(
-                            message = msg,
-                            permanent = inaccessible,
-                            reason = if (inaccessible) State.FailReason.STORAGE_INACCESSIBLE
-                            else State.FailReason.GENERIC,
-                        )
-                        return@useRemoteService Result.failure(Exception(msg))
-                    }
-                    srv.setForceFullscreenOnVirtualDisplay(appSettings.forceFullscreenOnVirtualDisplay.value)
-
-                    if (appSettings.debugMode.value) {
-                        val appPid = Process.myPid()
-                        val servicePid = srv.pid()
-                        CoroutineScope(Dispatchers.IO).async {
-                            runCatching {
-                                LogcatServiceManager.bind()
-                                LogcatServiceManager.startCapture(
-                                    appPid,
-                                    servicePid,
-                                    pathConfig.coreRootDir
-                                )
-                            }.onFailure { Timber.w(it, "LogcatService startCapture failed") }
-                        }
-                    }
-
-                    val maa = srv.maaCoreService
-                    val isGlobal = resourceProfileOf(clientType).isNotEmpty()
-
-                    copyTasksJson(pathConfig.cacheResourceDir)
-                    if (isGlobal) {
-                        copyTasksJson(pathConfig.globalCacheResourceDir(clientType).absolutePath)
-                    }
-
-                    // 独立目录：投递热更包与用户文件
-                    if (!coreDataPusher.prepare(srv)) {
-                        val msg = "Core data prepare failed"
-                        _state.value = State.Failed(msg)
-                        Timber.e(msg)
-                        return@useRemoteService Result.failure(Exception(msg))
-                    }
-
-                    if (!loadResIfExists(maa, pathConfig.rootDir)) {
-                        _state.value = State.Failed("Failed to load main resource")
-                        Timber.e("LoadResource failed: ${pathConfig.rootDir}")
-                        return@useRemoteService Result.failure(Exception("Failed to load main resource"))
-                    }
-
-                    val followUps = buildList {
-                        add(pathConfig.cacheDir)
-                        if (isGlobal) {
-                            pathConfig.globalResourceDir(clientType).parent?.let(::add)
-                            pathConfig.globalCacheResourceDir(clientType).parent?.let(::add)
-                        }
-                    }
-
-                    followUps.forEach { loadResIfExists(maa, it) }
-
-                    if (appSettings.tasksOverrideEnabled.value) {
-                        loadResIfExists(maa, pathConfig.overridesDir)
-                    }
-
-                    _state.value = State.Ready
-                    Result.success(Unit)
+            useRemoteService { srv ->
+                val setupCode = srv.setup(pathConfig.coreRootDir, appSettings.debugMode.value)
+                if (setupCode != SetupResult.OK) {
+                    val desc = SetupResult.describe(setupCode)
+                    val msg = "Remote setup failed: $desc"
+                    Timber.e("%s userDir=%s", msg, pathConfig.coreRootDir)
+                    val inaccessible = setupCode == SetupResult.ERR_USER_DIR_INACCESSIBLE
+                    _state.value = State.Failed(
+                        message = msg,
+                        permanent = inaccessible,
+                        reason = if (inaccessible) State.FailReason.STORAGE_INACCESSIBLE
+                        else State.FailReason.GENERIC,
+                    )
+                    return@useRemoteService Result.failure(Exception(msg))
                 }
+                srv.setForceFullscreenOnVirtualDisplay(appSettings.forceFullscreenOnVirtualDisplay.value)
+
+                if (appSettings.debugMode.value) {
+                    val appPid = Process.myPid()
+                    val servicePid = srv.pid()
+                    CoroutineScope(Dispatchers.IO).async {
+                        runCatching {
+                            LogcatServiceManager.bind()
+                            LogcatServiceManager.startCapture(
+                                appPid,
+                                servicePid,
+                                pathConfig.coreRootDir
+                            )
+                        }.onFailure { Timber.w(it, "LogcatService startCapture failed") }
+                    }
+                }
+
+                val maa = srv.maaCoreService
+                val isGlobal = resourceProfileOf(clientType).isNotEmpty()
+
+                copyTasksJson(pathConfig.cacheResourceDir)
+                if (isGlobal) {
+                    copyTasksJson(pathConfig.globalCacheResourceDir(clientType).absolutePath)
+                }
+
+                // 独立目录：投递热更包与用户文件
+                if (!coreDataPusher.prepare(srv)) {
+                    val msg = "Core data prepare failed"
+                    _state.value = State.Failed(msg)
+                    Timber.e(msg)
+                    return@useRemoteService Result.failure(Exception(msg))
+                }
+
+                if (!loadResIfExists(maa, pathConfig.rootDir)) {
+                    _state.value = State.Failed("Failed to load main resource")
+                    Timber.e("LoadResource failed: ${pathConfig.rootDir}")
+                    return@useRemoteService Result.failure(Exception("Failed to load main resource"))
+                }
+
+                val followUps = buildList {
+                    add(pathConfig.cacheDir)
+                    if (isGlobal) {
+                        pathConfig.globalResourceDir(clientType).parent?.let(::add)
+                        pathConfig.globalCacheResourceDir(clientType).parent?.let(::add)
+                    }
+                }
+
+                followUps.forEach { loadResIfExists(maa, it) }
+
+                if (appSettings.tasksOverrideEnabled.value) {
+                    loadResIfExists(maa, pathConfig.overridesDir)
+                }
+
+                _state.value = State.Ready
+                Result.success(Unit)
             }
         } catch (e: Exception) {
             Timber.e(e, "MaaResourceLoader error")

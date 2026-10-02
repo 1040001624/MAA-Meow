@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 import java.io.File
@@ -310,11 +311,14 @@ object RemoteServiceManager {
         if (_state.value is ServiceState.Connected) boundBackend else null
 
 
-    /** [timeoutMs] 为 null 时按当前后端推算默认等待 */
+    /**
+     * [timeoutMs] 为 null 时按当前后端推算默认等待
+     * 整体切到 IO：[action] 里的同步 Binder 调用不能落在调用方（主）线程
+     */
     suspend fun <R> useRemoteService(
         timeoutMs: Long? = null,
         action: suspend (RemoteService) -> R
-    ): R {
+    ): R = withContext(Dispatchers.IO) {
         var accessState = RemoteAccessCoordinator.refresh()
         var backend = accessState.configuredBackend
         if (!accessState.isGranted(backend)) {
@@ -332,6 +336,6 @@ object RemoteServiceManager {
         }
 
         val service = getInstance(timeoutMs)
-        return action(service)
+        action(service)
     }
 }

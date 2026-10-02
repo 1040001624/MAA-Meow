@@ -29,7 +29,6 @@ import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,7 +39,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 class HomeViewModel(
@@ -479,10 +477,8 @@ class HomeViewModel(
                 val (targetWidth, targetHeight) = Misc.calculate16x9Resolution(
                     width, height
                 )
-                val ret = withContext(Dispatchers.IO) {
-                    useRemoteService { service ->
-                        service.setForcedDisplaySize(targetWidth, targetHeight)
-                    }
+                val ret = useRemoteService { service ->
+                    service.setForcedDisplaySize(targetWidth, targetHeight)
                 }
                 Timber.i("onChangeTo16x9Resolution: setForcedDisplaySize result: %s", ret)
 
@@ -517,9 +513,7 @@ class HomeViewModel(
                     }
                 }
                 _uiState.update { it.copy(isLoading = true) }
-                val ret = withContext(Dispatchers.IO) {
-                    useRemoteService { it.clearForcedDisplaySize() }
-                }
+                val ret = useRemoteService { it.clearForcedDisplaySize() }
                 Timber.i("onResetResolution: %s", ret)
                 _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
@@ -572,8 +566,13 @@ class HomeViewModel(
                 DisplayMode.PRIMARY
             }
             if (permissionManager.permissions.remoteAccessGranted) {
-                useRemoteService {
-                    it.setVirtualDisplayMode(mode)
+                // 启动任务时还会再下发一次，这里失败只记日志
+                try {
+                    useRemoteService {
+                        it.setVirtualDisplayMode(mode)
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "onRunModeChange: setVirtualDisplayMode failed")
                 }
             }
         }
