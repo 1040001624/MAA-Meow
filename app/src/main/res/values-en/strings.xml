@@ -14,7 +14,6 @@
     <string name="common_add">Add</string>
     <string name="common_load">Load</string>
     <string name="common_clear">Clear</string>
-    <string name="common_export">Export</string>
     <string name="common_select_all">Select All</string>
     <string name="common_delete">Delete</string>
     <string name="dialog_import_success_title">Import Successful</string>

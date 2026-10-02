@@ -18,13 +18,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -48,7 +45,6 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
-import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.ErrorLogViewModel
 import com.aliothmoon.maameow.theme.LogTypography
@@ -75,13 +71,6 @@ fun ErrorLogView(
         }
     }
 
-    var showExportSheet by remember { mutableStateOf(false) }
-
-    LogExportController(
-        sheetVisible = showExportSheet,
-        onSheetDismiss = { showExportSheet = false },
-    )
-
     // 拦截系统返回键：详情页时先回到列表
     BackHandler(enabled = selectedContent != null) {
         viewModel.clearSelectedLog()
@@ -100,7 +89,6 @@ fun ErrorLogView(
             isLoading = isLoading,
             onFileClick = { viewModel.loadLogContent(it) },
             onCleanup = { viewModel.cleanupAll() },
-            onExport = { showExportSheet = true },
             onBack = { navController.navigateUp() }
         )
     }
@@ -112,7 +100,6 @@ private fun ErrorLogFileListView(
     isLoading: Boolean,
     onFileClick: (ErrorLogViewModel.ErrorLogFile) -> Unit,
     onCleanup: () -> Unit,
-    onExport: () -> Unit,
     onBack: () -> Unit
 ) {
     var showCleanupConfirm by remember { mutableStateOf(false) }
@@ -142,13 +129,6 @@ private fun ErrorLogFileListView(
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = onBack,
                 actions = {
-                    IconButton(onClick = onExport) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.common_export),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
                     TextButton(onClick = { showCleanupConfirm = true }) {
                         Text(
                             stringResource(R.string.log_cleanup_all),

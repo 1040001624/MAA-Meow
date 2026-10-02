@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,7 +45,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.log.LogEntry
 import com.aliothmoon.maameow.data.log.LogFileInfo
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
-import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.LogHistoryViewModel
 import com.aliothmoon.maameow.theme.LogTypography
@@ -64,13 +62,6 @@ fun LogHistoryView(
     val selectedLogEntries by viewModel.selectedLogEntries.collectAsStateWithLifecycle()
     val selectedFileName by viewModel.selectedFileName.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-
-    var showExportSheet by remember { mutableStateOf(false) }
-
-    LogExportController(
-        sheetVisible = showExportSheet,
-        onSheetDismiss = { showExportSheet = false },
-    )
 
     // 拦截系统返回键：详情页时先回到列表
     BackHandler(enabled = selectedLogEntries != null) {
@@ -91,7 +82,6 @@ fun LogHistoryView(
             onFileClick = { viewModel.loadLogContent(it) },
             onFileDelete = { viewModel.deleteLogFile(it) },
             onCleanup = { viewModel.cleanupOldLogs() },
-            onExport = { showExportSheet = true },
             onBack = { navController.navigateUp() }
         )
     }
@@ -104,7 +94,6 @@ private fun LogFileListView(
     onFileClick: (LogFileInfo) -> Unit,
     onFileDelete: (LogFileInfo) -> Unit,
     onCleanup: () -> Unit,
-    onExport: () -> Unit,
     onBack: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf<LogFileInfo?>(null) }
@@ -134,13 +123,6 @@ private fun LogFileListView(
                 navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
                 onNavigationClick = onBack,
                 actions = {
-                    IconButton(onClick = onExport) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.common_export),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
                     TextButton(onClick = onCleanup) {
                         Text(
                             stringResource(R.string.log_cleanup_30_days),
