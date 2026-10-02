@@ -245,8 +245,8 @@ class TelemetryController(
             options.logs.beforeSend = SentryOptions.Logs.BeforeSendLogCallback { it.apply { bindDiagnosticTrace() } }
             // Session（Release Health）开着，日活与 crash-free 率靠它
             options.isEnableAutoSessionTracking = true
-            // 其余自动采集面全部关掉，只留本类显式发出的事件与未捕获异常
-            options.isAnrEnabled = false
+            // 自动采集只留未捕获异常与 ANR，其余全部关掉
+            options.isAnrEnabled = true
             // 不关的话每条消息事件都会附上发送线程的调用栈
             options.isAttachStacktrace = false
             options.isAttachScreenshot = false

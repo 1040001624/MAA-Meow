@@ -13,6 +13,7 @@ The setting is **Settings → Third-party services → Help improve this project
 | Start failure | Resource loading, instance creation, virtual display or connection fails | The failing stage; the logs of that run |
 | Service death | The Shizuku / Root process exits unexpectedly during a run | The task chain that was running; the logs of that run and MaaCore's `crash.log` |
 | App crash | Uncaught Java exception | Stack trace |
+| App not responding | The system reports an ANR because the main thread is blocked | Stack traces of the app's threads |
 | Activity | App goes to foreground or background | Session start and end, used for daily active users and crash rate |
 
 "Logs" means the MaaCore log (`asst.log`), the run log of that run and the app error log, plus the service connection diagnostics for start failures and service deaths. Only the part written around the incident is taken, with a little preceding context, 1 MiB in total at most.
@@ -31,7 +32,7 @@ Every record carries:
 - No screenshot in foreground mode: it would capture the phone's main screen, which may show other apps
 - Task parameters are summarized: booleans and numbers are sent as-is, enum-like values such as stage, theme and client are sent as-is, any other string (account, reporting ID, file path) is reported only as filled or empty, and lists only by length
 - Logs are redacted before they leave the device: the values of `account_name`, `penguin_id` and `yituliu_id`, and the stored Penguin Statistics ID, Yituliu token, MirrorChyan CDK and notification channel secrets are replaced with `***`
-- No ANR, view hierarchy, tap or navigation trail, network request trail, or system event trail (screen on/off, battery, connectivity changes) is collected
+- No view hierarchy, tap or navigation trail, network request trail, or system event trail (screen on/off, battery, connectivity changes) is collected
 - No IP address: default PII is disabled in the SDK and IP storage is disabled in the Sentry project
 
 Two things redaction cannot remove:
