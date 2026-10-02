@@ -147,10 +147,8 @@ fun ScheduleWakeUnlockView(
                         WakeUnlockTypeContent(type = wakeUnlockType) { type ->
                             when (type) {
                                 AppSettingsManager.WAKE_TYPE_PIN -> SettingWakePinSection(
-                                    contentColor = contentColor,
                                     wakeCredential = wakeCredential,
                                     onCredentialChange = { viewModel.setWakeCredential(it) },
-                                    onTest = { viewModel.runWakeTest() },
                                 )
 
                                 AppSettingsManager.WAKE_TYPE_GESTURE -> SettingWakeGestureSection(
@@ -160,7 +158,6 @@ fun ScheduleWakeUnlockView(
                                     onRecord = { viewModel.startGestureRecord() },
                                     onCancelRecord = { viewModel.cancelGestureRecord() },
                                     onClear = { viewModel.clearGesture() },
-                                    onTest = { viewModel.runWakeTest() },
                                 )
 
                                 else -> Text(
@@ -171,6 +168,16 @@ fun ScheduleWakeUnlockView(
                                 )
                             }
                         }
+                        ListItemDivider()
+                        // 放在横滑内容之外，三种方式共用
+                        SettingWakeTestRow(
+                            contentColor = contentColor,
+                            type = wakeUnlockType,
+                            gestureRecorded = unlockGesture != null,
+                            busy = wakeTestState == ScheduleWakeUnlockViewModel.WakeTestState.Testing ||
+                                    gestureRecordState.isRecording,
+                            onTest = { viewModel.runWakeTest() },
+                        )
                     }
                 }
             }
@@ -271,10 +278,8 @@ private fun SettingWakeGestureSection(
     onRecord: () -> Unit,
     onCancelRecord: () -> Unit,
     onClear: () -> Unit,
-    onTest: () -> Unit,
 ) {
-    val recording = recordState is ScheduleWakeUnlockViewModel.GestureRecordState.Preparing ||
-            recordState is ScheduleWakeUnlockViewModel.GestureRecordState.Recording
+    val recording = recordState.isRecording
 
     Column(
         modifier = Modifier
@@ -378,17 +383,38 @@ private fun SettingWakeGestureSection(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
         )
-
-        if (gesture != null) {
-            SettingRow(
-                title = stringResource(R.string.settings_wake_test_button),
-                description = stringResource(R.string.settings_wake_gesture_test_hint),
-                titleColor = contentColor,
-                descriptionColor = contentColor.copy(alpha = 0.7f),
-                onClick = onTest,
-            )
-        }
     }
+}
+
+private val ScheduleWakeUnlockViewModel.GestureRecordState?.isRecording: Boolean
+    get() = this is ScheduleWakeUnlockViewModel.GestureRecordState.Preparing ||
+            this is ScheduleWakeUnlockViewModel.GestureRecordState.Recording
+
+@Composable
+private fun SettingWakeTestRow(
+    contentColor: Color,
+    type: String,
+    gestureRecorded: Boolean,
+    busy: Boolean,
+    onTest: () -> Unit,
+) {
+    val isGesture = type == AppSettingsManager.WAKE_TYPE_GESTURE
+    // 没录手势时凭证会退化成滑动解锁，测出来的不是用户选的方式
+    val missingGesture = isGesture && !gestureRecorded
+    SettingRow(
+        title = stringResource(R.string.settings_wake_test_button),
+        description = stringResource(
+            when {
+                missingGesture -> R.string.wake_result_gesture_empty
+                isGesture -> R.string.settings_wake_gesture_test_hint
+                else -> R.string.settings_wake_test_hint
+            },
+        ),
+        titleColor = contentColor,
+        descriptionColor = contentColor.copy(alpha = 0.7f),
+        enabled = !missingGesture && !busy,
+        onClick = onTest,
+    )
 }
 
 @Composable
@@ -456,10 +482,8 @@ private fun gestureStepText(step: UnlockStep): String = when (step) {
 
 @Composable
 private fun SettingWakePinSection(
-    contentColor: Color,
     wakeCredential: String,
     onCredentialChange: (String) -> Unit,
-    onTest: () -> Unit,
 ) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         SettingSecretField(
@@ -475,13 +499,6 @@ private fun SettingWakePinSection(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-        )
-        SettingRow(
-            title = stringResource(R.string.settings_wake_test_button),
-            description = stringResource(R.string.settings_wake_test_hint),
-            titleColor = contentColor,
-            descriptionColor = contentColor.copy(alpha = 0.7f),
-            onClick = onTest,
         )
     }
 }
