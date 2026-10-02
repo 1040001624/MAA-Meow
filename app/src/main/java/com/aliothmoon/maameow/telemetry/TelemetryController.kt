@@ -118,7 +118,7 @@ class TelemetryController(
             true
         }
         if (begun != true) return null
-        // 读资源版本要碰盘，调用方可能在主线程
+        // 调用方可能在主线程
         scope.launch { runCatching { refreshRunTags() } }
         return runId
     }
@@ -267,13 +267,9 @@ class TelemetryController(
         refreshRunTags()
     }
 
-    /** 会随用户设置变的那几项，每轮开跑时重读 */
     private fun refreshRunTags() {
-        Sentry.setTag("client_type", taskChainState.clientType)
-        Sentry.setTag("run_mode", settings.runMode.value.name.lowercase())
-        Sentry.setTag("backend", RemoteAccessCoordinator.configuredBackend().name.lowercase())
-        Sentry.setTag("core_location", pathConfig.coreLocation.name.lowercase())
-        pathConfig.readDiskResourceVersion()?.let { Sentry.setTag("resource.version", it) }
+        TelemetryRunTags.collect(context, settings, taskChainState, pathConfig)
+            .forEach { (key, value) -> Sentry.setTag(key, value) }
     }
 
     private suspend fun secrets(): Collection<String> = TelemetrySecrets.collect(

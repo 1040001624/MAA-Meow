@@ -22,7 +22,8 @@ Every record carries:
 
 - An anonymous device ID: a salted SHA-256 of `ANDROID_ID`, which cannot be reversed. The same value appears as `Telemetry ID` in the `device_info.txt` of an exported log package; include it in bug reports so the matching records can be found
 - App version, MaaCore version, resource version and build type
-- Client type, run mode, elevation backend and data location
+- Client type, game version, run mode, background resolution and data location
+- Elevation backend, whether Shizuku runs as root or adb, and whether the app is exempt from battery optimization
 - Device model, OS version, SoC, total memory and ABI
 - The device and OS information the Sentry SDK adds on its own: battery level, free memory and storage, screen size, language and time zone, connection type, whether the device is rooted, and similar
 

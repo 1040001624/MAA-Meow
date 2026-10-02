@@ -22,7 +22,8 @@ MaaMeow 通过 [Sentry](https://sentry.io) 匿名上报崩溃与任务运行情�
 
 - 匿名设备 ID：`ANDROID_ID` 加盐后的 SHA-256，无法反推原值。导出日志的 `device_info.txt` 里有同一个值（`Telemetry ID`），反馈问题时带上它，便于在后台找到对应记录
 - App 版本、MaaCore 版本、资源版本、构建类型
-- 客户端类型、运行模式、提权方式、数据目录位置
+- 客户端类型、游戏版本、运行模式、后台分辨率、数据目录位置
+- 提权方式、Shizuku 是以 root 还是 adb 身份运行、App 是否豁免电池优化
 - 设备型号、系统版本、SoC、内存总量、ABI
 - Sentry SDK 自带的设备与系统信息：电量、可用内存与存储、屏幕尺寸、语言与时区、联网类型、是否 Root 等
 
