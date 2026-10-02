@@ -78,6 +78,8 @@ private const val STAY_SECONDS_REQUIRED = 7
 /** 未读完狂点确认：超过该次数放行并解锁成就 */
 private const val STUBBORN_CLICKS_TO_UNLOCK = 20
 
+private val TOGGLE_VERTICAL_PADDING = 4.dp
+
 @Composable
 fun AnnouncementDialog(
     imageAssetPath: String?,
@@ -320,7 +322,12 @@ fun AnnouncementDialog(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(if (inLandscape) 12.dp else 16.dp))
+                    // 勾选行自带上下内边距，这里扣掉
+                    Spacer(
+                        modifier = Modifier.height(
+                            (if (inLandscape) 12.dp else 16.dp) - TOGGLE_VERTICAL_PADDING
+                        )
+                    )
 
                     if (inLandscape) {
                         Row(
@@ -395,7 +402,9 @@ private fun DontShowAgainToggle(
                     enabled = enabled,
                     role = Role.Checkbox,
                     onValueChange = onCheckedChange,
-                ),
+                )
+                // 勾选框贴着左缘，不留这点高度会被圆角裁掉两个角
+                .padding(vertical = TOGGLE_VERTICAL_PADDING),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -432,7 +441,6 @@ private fun DontShowAgainToggle(
             )
         }
         if (compact || hint != null) {
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = hint ?: "\u00A0",
                 style = MaterialTheme.typography.bodySmall,
