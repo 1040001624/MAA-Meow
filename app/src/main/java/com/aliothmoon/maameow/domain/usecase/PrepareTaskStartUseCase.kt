@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.domain.usecase
 
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextJoin
 import com.aliothmoon.maameow.utils.i18n.uiTextLines
@@ -40,8 +41,21 @@ class PrepareTaskStartUseCase(
             is GameReadiness.Ready ->
                 TaskStartDecision.Ready(plan.copy(gameAliveBeforeStart = readiness.gameAliveBeforeStart))
 
-            is GameReadiness.RequiresConfirmation ->
-                TaskStartDecision.RequiresConfirmation(readiness.acknowledgement)
+            is GameReadiness.RequiresConfirmation -> {
+                val acknowledgement = readiness.acknowledgement
+                // 走到这里说明本轮不拉起游戏；链上却有启用的唤醒，只能是被「从此处运行」跳过了
+                val wakeUpSkipped =
+                    acknowledgement == TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP &&
+                            chain.any { it.enabled && (it.config as? WakeUpConfig)?.startGameEnabled == true }
+                TaskStartDecision.RequiresConfirmation(
+                    acknowledgement = acknowledgement,
+                    message = if (wakeUpSkipped) {
+                        uiTextOf(R.string.task_start_warning_wake_up_skipped)
+                    } else {
+                        acknowledgement.message
+                    },
+                )
+            }
 
             is GameReadiness.Blocked ->
                 TaskStartDecision.Blocked(readiness.reason)
@@ -87,9 +101,8 @@ sealed interface TaskStartDecision {
 
     data class RequiresConfirmation(
         val acknowledgement: TaskStartAcknowledgement,
-    ) : TaskStartDecision {
-        val message: UiText get() = acknowledgement.message
-    }
+        val message: UiText = acknowledgement.message,
+    ) : TaskStartDecision
 
     data class Blocked(
         val reason: TaskStartDecisionReason,

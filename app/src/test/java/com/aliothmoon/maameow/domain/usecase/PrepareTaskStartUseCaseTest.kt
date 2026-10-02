@@ -183,6 +183,29 @@ class PrepareTaskStartUseCaseTest {
     }
 
     @Test
+    fun runFromNode_skippingEnabledWakeUp_saysSkippedInsteadOfNotEnabled() = runBlocking {
+        val wakeUp = TaskChainNode(
+            name = "开始唤醒",
+            order = 0,
+            config = WakeUpConfig(clientType = "Official", startGameEnabled = true),
+        )
+        val award = TaskChainNode(name = "领取奖励", order = 1, config = AwardConfig())
+
+        val result = useCase(AppAliveStatus.DEAD)(
+            chain = listOf(wakeUp, award),
+            context = TaskStartContext(mode = TaskStartMode.MANUAL, fromNodeId = award.id),
+        )
+
+        assertEquals(
+            TaskStartDecision.RequiresConfirmation(
+                acknowledgement = TaskStartAcknowledgement.GAME_NOT_RUNNING_WITHOUT_WAKE_UP,
+                message = uiTextOf(R.string.task_start_warning_wake_up_skipped),
+            ),
+            result
+        )
+    }
+
+    @Test
     fun pureSideTaskPlan_skipsReadinessGate() = runBlocking {
         // 不起 Core 也不碰游戏，游戏没开也该放行
         operBoxViaYituliu.value = true
