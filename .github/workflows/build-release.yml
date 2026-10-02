@@ -185,27 +185,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 生成当前版本的 changelog（用于 Release body）
-          git-cliff --current --strip header --github-repo Aliothmoon/MAA-Meow -o RELEASE_NOTES.md
-          # 追加下载说明与 Mirror酱 下载链接
-          cat >> RELEASE_NOTES.md << 'EOF'
-
-          ---
-
-          ### 下载哪个包
-
-          | 包 | 适用 |
-          |---|---|
-          | `universal` | 通用，不确定选这个 |
-          | `arm64-v8a` | ARM 64 位真机 |
-          | `x64` | x86_64 模拟器（Windows 上的蓝叠 / MuMu / 雷电等） |
-          | `z-arm64-v8a-emu-compat` | 兼容包，arm64 模拟器（Mac 上的蓝叠 Air、MuMu Pro Mac 等）启动任务即闪退时改用 |
-
-          兼容包功能与 `arm64-v8a` 一致，只是关掉了 OpenCV 的 SVE2 指令分派。装了 `universal` 闪退的模拟器用户请直接换这个包，不要再试 `universal`
-
-          ---
-
-          [已有 Mirror酱 CDK？前往 Mirror酱 高速下载](https://mirrorchyan.com/zh/projects?rid=MAA&os=android&source=maagh-release)
-          EOF
+          git-cliff --current --strip header --github-repo Aliothmoon/MAA-Meow -o RELEASE_CHANGELOG.md
 
       - name: Download all APK artifacts
         uses: actions/download-artifact@v8
@@ -213,6 +193,16 @@ jobs:
           pattern: release-apk-*
           merge-multiple: true
           path: apks
+
+      - name: Build release body
+        # 下载区按实际要上传的 APK 生成，放在 changelog 之前
+        run: |
+          python3 .github/scripts/release_body.py \
+            --artifacts apks \
+            --tag "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --changelog RELEASE_CHANGELOG.md \
+            --output RELEASE_NOTES.md
 
       - name: Download mapping artifact
         uses: actions/download-artifact@v8

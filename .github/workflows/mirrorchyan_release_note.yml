@@ -15,11 +15,33 @@ jobs:
     if: ${{ github.repository_owner == 'Aliothmoon' }}
 
     steps:
+      # Release 正文顶部的下载区只给 GitHub 页面看，传给 Mirror酱 的更新说明（也是应用内更新说明的来源）里剔掉
+      - id: note
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          # 未指定 tag 时取最新的非草稿 release
+          if [[ -z "$TAG" ]]; then
+            TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 1 --json tagName -q '.[0].tagName')
+          fi
+          # 标记与 .github/scripts/release_body.py 保持一致
+          note=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body \
+            | perl -0pe 's/<!-- downloads:start -->.*?<!-- downloads:end -->\s*//s')
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          {
+            echo "note<<__RELEASE_NOTE_EOF__"
+            echo "$note"
+            echo "__RELEASE_NOTE_EOF__"
+          } >> "$GITHUB_OUTPUT"
+
       - id: uploading
         uses: MirrorChyan/release-note-action@v1
         with:
           mirrorchyan_rid: MAA-Meow
-          version_name: ${{ inputs.tag }}
+          version_name: ${{ steps.note.outputs.tag }}
+          release_note: ${{ steps.note.outputs.note }}
 
           owner: Aliothmoon
           repo: MAA-Meow
