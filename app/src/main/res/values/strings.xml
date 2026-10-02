@@ -1213,7 +1213,6 @@
 
     <!-- panel: mini game -->
     <string name="panel_mini_game_title">牛杂</string>
-    <string name="panel_mini_game_name">小游戏名称</string>
     <string name="panel_mini_game_ending">结局</string>
     <string name="panel_mini_game_use_normal_token">中坚信物不足时使用普通信物</string>
     <string name="panel_mini_game_event_shop_blacklist">商品黑名单（勾选或填写的商品不购买）</string>

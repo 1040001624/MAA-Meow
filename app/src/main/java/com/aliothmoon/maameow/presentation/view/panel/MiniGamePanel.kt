@@ -87,11 +87,6 @@ fun MiniGamePanel(
                 miniGames.groupBy { it.category.resolve(context) }
             }
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = stringResource(R.string.panel_mini_game_name),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 grouped.forEach { (category, games) ->
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
