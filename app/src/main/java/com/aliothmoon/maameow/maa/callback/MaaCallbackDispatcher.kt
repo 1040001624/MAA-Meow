@@ -9,6 +9,7 @@ import com.aliothmoon.maameow.domain.service.CoreReportRequest
 import com.aliothmoon.maameow.domain.service.GameDataReporter
 import com.aliothmoon.maameow.domain.service.MaaNotificationCenter
 import com.aliothmoon.maameow.domain.service.MaaSessionLogger
+import com.aliothmoon.maameow.domain.service.RunTelemetry
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.CallbackJsonAbbreviator
@@ -22,6 +23,7 @@ class MaaCallbackDispatcher(
     private val subTaskHandler: SubTaskHandler,
     private val notificationCenter: MaaNotificationCenter,
     private val gameDataReporter: GameDataReporter,
+    private val telemetry: RunTelemetry,
 ) {
 
     fun onEvent(msg: Int, json: String?) {
@@ -42,6 +44,8 @@ class MaaCallbackDispatcher(
             Timber.e(e, "解析回调 JSON 失败: msg=$message, json=$json")
             null
         }
+
+        telemetry.onCallback(message, details)
 
         // 根据消息类型分发
         when (message) {

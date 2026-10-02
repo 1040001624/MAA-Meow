@@ -238,6 +238,10 @@ data class AppSettings(
     @PrefKey(default = "")
     val eventShopBlacklistCustom: String = "",
 
+    /** 帮助改进本项目：匿名上报崩溃、任务统计与失败现场 */
+    @PrefKey(default = "true")
+    val telemetryEnabled: String = "true",
+
     /** 喝醉过但还没醒酒，下次启动提示 */
     @PrefKey(default = "false")
     val pallasHangover: String = "false",

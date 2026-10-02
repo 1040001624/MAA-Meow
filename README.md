@@ -53,6 +53,7 @@
 |---|---|
 | [构建指南](docs/zh-cn/develop/BUILDING.md) | 从源码构建 APK |
 | [外部自动化集成](docs/zh-cn/develop/AUTOMATION.md) | 通过 Intent / am 命令与 MacroDroid、Tasker 联动 |
+| [遥测](docs/zh-cn/develop/TELEMETRY.md) | 匿名上报的内容、不上报的内容与关闭方法 |
 | [Roadmap](docs/zh-cn/develop/ROADMAP.md) | 功能规划与进度 |
 | [PR 规范](docs/zh-cn/develop/PULL_REQUEST_GUIDELINES.md) | 提交 PR 前的标题、描述、验证与评审约定 |
 | [第三方代码声明](docs/zh-cn/develop/THIRD_PARTY_NOTICES.md) | 引用的开源组件及许可证 |

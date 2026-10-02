@@ -780,6 +780,14 @@ class AppSettingsManager internal constructor(
         }
     }
 
+    val telemetryEnabled: StateFlow<Boolean> = setting { it.telemetryEnabled.toBooleanStrictOrNull() ?: true }
+
+    suspend fun setTelemetryEnabled(enabled: Boolean) {
+        with(AppSettingsSchema) {
+            context.dataStore.edit { it[telemetryEnabled] = enabled.toString() }
+        }
+    }
+
     val eventShopBlacklistPresets: StateFlow<Set<EventShopPreset>> =
         setting { EventShopBlacklist.parsePresets(it.eventShopBlacklistPresets) }
 

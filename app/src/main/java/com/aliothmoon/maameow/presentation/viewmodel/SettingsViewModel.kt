@@ -274,6 +274,13 @@ class SettingsViewModel(
         }
     }
 
+    val telemetryEnabled: StateFlow<Boolean> = appSettingsManager.telemetryEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setTelemetryEnabled(enabled: Boolean) {
+        viewModelScope.launch { appSettingsManager.setTelemetryEnabled(enabled) }
+    }
+
     val reportToPenguin: StateFlow<Boolean> = appSettingsManager.reportToPenguin
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 

@@ -60,6 +60,11 @@
             android:shell="true"
             tools:targetApi="q" />
 
+        <!-- 手动初始化；不关的话 SentryInitProvider 启动读不到 DSN 直接崩 -->
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+
         <!-- Scoped Storage adaptation metadata -->
         <meta-data
             android:name="ScopedStorage"

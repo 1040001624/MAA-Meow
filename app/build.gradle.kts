@@ -90,6 +90,11 @@ android {
             .takeIf { it.isFile }?.readText()?.trim().orEmpty()
         buildConfigField("String", "MAA_CORE_VERSION", "\"$maaCoreVersion\"")
 
+        // 留空则遥测整体不初始化，fork 与本地构建不会往官方项目上报
+        val sentryDsn = System.getenv("SENTRY_DSN")?.trim().orEmpty()
+            .ifEmpty { localProperties.getProperty("sentry.dsn", "").trim() }
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
+
         ndk {
             abiFilters.addAll(nativeAbis)
         }
@@ -237,6 +242,7 @@ dependencies {
     implementation(libs.angus.mail)
     implementation(libs.angus.activation)
     implementation(libs.jakarta.activation.api)
+    implementation(libs.sentry.android.core)
     implementation(libs.reorderable)
     implementation(libs.compose.markdown)
 

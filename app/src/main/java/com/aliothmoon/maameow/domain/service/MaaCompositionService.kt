@@ -78,6 +78,7 @@ class MaaCompositionService(
     private val dropsRefresher: FightDropsRefresher,
     private val toolboxResultCollector: ToolboxResultCollector,
     private val coreDataPusher: CoreDataPusher,
+    private val telemetry: RunTelemetry,
 ) : MaaExecutionStateHolder {
 
     private val _state = MutableStateFlow(MaaExecutionState.IDLE)
@@ -228,6 +229,7 @@ class MaaCompositionService(
     init {
         scope.launch {
             unifiedStateDispatcher.serviceDiedEvent.collect {
+                telemetry.onServiceDied(_state.value)
                 stopBackgroundMonitors()
                 setRunState(MaaExecutionState.ERROR)
                 sessionLogger.completeSessionAndWait(
@@ -288,6 +290,7 @@ class MaaCompositionService(
         fallbacks: Map<TaskSlot, TaskFallbackChain> = emptyMap(),
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
+        kind = RunKind.CHAIN,
         tasks = tasks,
         clientType = clientType,
         fallbacks = fallbacks,
@@ -303,6 +306,7 @@ class MaaCompositionService(
         tasks: List<MaaTaskParams>,
         clientType: String = taskChainState.clientType
     ): StartResult = executeStart(
+        kind = RunKind.AUX,
         tasks = tasks,
         clientType = clientType,
         startMessage = context.getString(R.string.runlog_copilot_start),
@@ -312,6 +316,7 @@ class MaaCompositionService(
     private suspend fun failStart(
         message: String, sessionStatus: String, result: StartResult
     ): StartResult {
+        telemetry.onStartFailed(sessionStatus)
         setRunState(MaaExecutionState.ERROR)
         sessionLogger.appendAndWait(message, LogLevel.ERROR)
         sessionLogger.endSessionAndWait(sessionStatus)
@@ -321,8 +326,9 @@ class MaaCompositionService(
 
     /** 服务尚未就绪，任务拒绝启动但不进入 ERROR 状态（服务本身没有故障） */
     private suspend fun rejectStart(
-        message: String, sessionStatus: String, result: StartResult
+        message: String, sessionStatus: String, result: StartResult, cause: Throwable? = null,
     ): StartResult {
+        telemetry.onStartFailed(sessionStatus, cause ?: (result as? StartResult.ResourceError)?.exception)
         setRunState(MaaExecutionState.IDLE)
         sessionLogger.appendAndWait(message, LogLevel.WARNING)
         sessionLogger.endSessionAndWait(sessionStatus)
@@ -531,6 +537,7 @@ class MaaCompositionService(
         val (id, c) = hit
         dropsRefresher.stage(slot, c.dropTarget)
         taskChainStatusTracker.register(id, c.type.value, slot, c.logName)
+        telemetry.onTaskRegistered(id, c.params)
         dropsRefresher.bind(slot, id)
     }
 
@@ -545,6 +552,7 @@ class MaaCompositionService(
         // 独立目录：先投递用户文件，送不过去 core 那边就是 file-not-found，直接报资源错误
         if (!coreDataPusher.pushUserData()) {
             Timber.e("core user data push failed before start")
+            telemetry.onStartFailed("CORE_DATA_PUSH_ERROR")
             return StartResult.ResourceError(IllegalStateException("core user data push failed"))
         }
         taskChainStatusTracker.clear()
@@ -554,6 +562,7 @@ class MaaCompositionService(
             val taskId = maa.AppendTask(t.type.value, t.params)
             if (taskId > 0) {
                 taskChainStatusTracker.register(taskId, t.type.value, t.slot, t.logName)
+                telemetry.onTaskRegistered(taskId, t.params)
                 t.slot?.let { dropsRefresher.bind(it, taskId) }
                 return@forEach
             }
@@ -605,6 +614,7 @@ class MaaCompositionService(
     private val startMutex = Mutex()
 
     private suspend fun executeStart(
+        kind: RunKind,
         tasks: List<MaaTaskParams>,
         clientType: String,
         startMessage: String,
@@ -615,12 +625,13 @@ class MaaCompositionService(
         limitRunDuration: Boolean = false,
     ): StartResult = startMutex.withLock {
         executeStartLocked(
-            tasks, clientType, startMessage, successMessage, preflightLogs, fallbacks, onSessionStarted,
+            kind, tasks, clientType, startMessage, successMessage, preflightLogs, fallbacks, onSessionStarted,
             limitRunDuration,
         )
     }
 
     private suspend fun executeStartLocked(
+        kind: RunKind,
         tasks: List<MaaTaskParams>,
         clientType: String,
         startMessage: String,
@@ -643,6 +654,8 @@ class MaaCompositionService(
         }
         val mode = appSettings.runMode.value
         sessionLogger.startSession(tasks.map { it.type.value })
+        // 凭这行能从会话日志找到遥测里的那一轮
+        telemetry.onRunStarted(kind, tasks)?.let { sessionLogger.appendToFileOnly("[Telemetry] run_id=$it") }
         subTaskHandler.resetSessionState()
         toolboxResultCollector.onSessionStart()
         onSessionStarted?.invoke()
@@ -692,7 +705,8 @@ class MaaCompositionService(
                 rejectStart(
                     context.getString(R.string.runlog_remote_connect_failed, e.message ?: ""),
                     "REMOTE_ACCESS_UNAVAILABLE",
-                    StartResult.RemoteAccessUnavailable(RemoteAccessCoordinator.configuredBackend())
+                    StartResult.RemoteAccessUnavailable(RemoteAccessCoordinator.configuredBackend()),
+                    cause = e,
                 )
             }
         }

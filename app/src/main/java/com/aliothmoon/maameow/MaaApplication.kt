@@ -18,6 +18,7 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.overlay.OverlayController
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
+import com.aliothmoon.maameow.telemetry.TelemetryController
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.NightModeBootstrap
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap
@@ -53,6 +54,7 @@ class MaaApplication : Application() {
     private val scheduleAlarmManager: ScheduleAlarmManager by inject()
     private val depotRepository: DepotRepository by inject()
     private val operBoxRepository: OperBoxRepository by inject()
+    private val telemetry: TelemetryController by inject()
 
     suspend fun awaitReady() = initialization.await()
 
@@ -83,6 +85,7 @@ class MaaApplication : Application() {
     }
 
     private fun postCreateApplication() {
+        telemetry.setup()
         RemoteServiceManager.initialize(this, appSettingsManager, pathConfig)
         overlayController.setup()
         unifiedStateDispatcher.start()

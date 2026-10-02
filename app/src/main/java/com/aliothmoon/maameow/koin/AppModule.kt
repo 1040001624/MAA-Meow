@@ -89,6 +89,7 @@ import com.aliothmoon.maameow.domain.service.RemoteAppAliveChecker
 import com.aliothmoon.maameow.domain.service.RemoteFrameSnapshotter
 import com.aliothmoon.maameow.domain.service.RemoteGameFpsReader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.service.RunTelemetry
 import com.aliothmoon.maameow.domain.service.ScreenSaverController
 import com.aliothmoon.maameow.domain.service.TaskEndRegistry
 import com.aliothmoon.maameow.domain.service.ToolboxExportService
@@ -123,6 +124,7 @@ import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.schedule.service.ScheduleFailureReporter
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerHandler
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
+import com.aliothmoon.maameow.telemetry.TelemetryController
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
 import kotlinx.coroutines.CoroutineScope
@@ -303,6 +305,7 @@ val appModule = module {
     singleOf(::AppWatchdog)
     single<GameFpsReader> { RemoteGameFpsReader() }
     single { GameFpsWatcher(reader = get(), sessionLogger = get(), context = androidApplication()) }
+    singleOf(::TelemetryController) { bind<RunTelemetry>() }
     singleOf(::MaaCompositionService)
     single<MaaExecutionStateHolder> { get<MaaCompositionService>() }
     single { GameMuteCoordinator(get(), RemoteGameAudioAdapter) }

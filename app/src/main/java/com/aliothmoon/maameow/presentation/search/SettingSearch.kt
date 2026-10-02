@@ -119,6 +119,10 @@ object SettingSearchIndex {
         ),
         SettingSearchEntry(R.string.settings_pip_on_home, backgroundRun, keywordsRes = R.string.search_keywords_pip),
 
+        SettingSearchEntry(
+            R.string.settings_telemetry, thirdParty, R.string.settings_telemetry_desc,
+            keywordsRes = R.string.search_keywords_telemetry,
+        ),
         SettingSearchEntry(R.string.settings_report_penguin, thirdParty, R.string.settings_report_penguin_desc),
         SettingSearchEntry(R.string.settings_report_yituliu, thirdParty, R.string.settings_report_yituliu_desc),
         SettingSearchEntry(R.string.settings_oper_box_yituliu_title, thirdParty, R.string.settings_oper_box_yituliu_desc),

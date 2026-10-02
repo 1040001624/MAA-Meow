@@ -21,6 +21,7 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.MaaCoreVersion
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.ShizukuManager
+import com.aliothmoon.maameow.telemetry.TelemetryUserId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -208,6 +209,8 @@ class LogExportService(
         append("App         : ${BuildConfig.APPLICATION_ID}\n")
         append("Version     : ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
         append("Build Type  : ${BuildConfig.BUILD_TYPE}\n")
+        // 遥测里的 user.id，凭它能把这份日志和后台的事件对上
+        append("Telemetry ID: ${runCatching { TelemetryUserId.get(context) }.getOrDefault("unknown")}\n")
         append("Device      : ${Build.MANUFACTURER} ${Build.MODEL}\n")
         append("Android     : ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
         append("Security    : ${Build.VERSION.SECURITY_PATCH}\n")

@@ -172,6 +172,7 @@ fun SettingsView(
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val liveUpdateEntryVisible by viewModel.liveUpdateEntryVisible.collectAsStateWithLifecycle()
     val deployWithPause by viewModel.deployWithPause.collectAsStateWithLifecycle()
+    val telemetryEnabled by viewModel.telemetryEnabled.collectAsStateWithLifecycle()
     val reportToPenguin by viewModel.reportToPenguin.collectAsStateWithLifecycle()
     val reportToYituliu by viewModel.reportToYituliu.collectAsStateWithLifecycle()
     val penguinId by viewModel.penguinId.collectAsStateWithLifecycle()
@@ -852,6 +853,16 @@ fun SettingsView(
                         revealToken = revealToken(SettingsSections.THIRD_PARTY),
                     ) {
                         SettingsGroupCard {
+                            SettingSearchTarget(R.string.settings_telemetry) {
+                                SettingSwitchItem(
+                                    title = stringResource(R.string.settings_telemetry),
+                                    description = stringResource(R.string.settings_telemetry_desc),
+                                    contentColor = contentColor,
+                                    checked = telemetryEnabled,
+                                    onCheckedChange = { viewModel.setTelemetryEnabled(it) }
+                                )
+                            }
+                            ListItemDivider()
                             SettingSearchTarget(R.string.settings_report_penguin) {
                                 SettingSwitchItem(
                                     title = stringResource(R.string.settings_report_penguin),

@@ -106,6 +106,9 @@ jobs:
           path: app/build/reports/lint-results-debug.html
 
       - name: Build Debug APK
+        env:
+          # fork 的 PR 拿不到 secret，构建出来的包不带遥测
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: ./gradlew clean assembleDebug
 
       - name: Upload APK

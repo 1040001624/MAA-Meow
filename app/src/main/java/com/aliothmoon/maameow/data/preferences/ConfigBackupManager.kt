@@ -64,11 +64,13 @@ class ConfigBackupManager(
             "不支持的备份版本: ${backup.version}，当前最高支持: $CURRENT_VERSION"
         }
         // 自定义背景的开关与令牌指向本机文件，导入其他设备的配置时保留本机值。
+        // 遥测开关是本机用户自己的选择，别人的备份（或没这个字段的旧备份）不能替他打开
         val localSettings = appSettingsManager.settings.first()
         appSettingsManager.setSettings(
             backup.appSettings.normalizedForImport().copy(
                 customBackgroundEnabled = localSettings.customBackgroundEnabled,
                 customBackgroundToken = localSettings.customBackgroundToken,
+                telemetryEnabled = localSettings.telemetryEnabled,
             )
         )
         notificationSettingsManager.updateSettings(backup.notificationSettings.reapplyWebhookPresetIfBlank())
