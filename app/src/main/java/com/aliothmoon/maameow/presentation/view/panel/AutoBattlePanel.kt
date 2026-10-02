@@ -385,7 +385,7 @@ fun AutoBattlePanel(
                             icon = Icons.Default.Public,
                             filled = false,
                             enabled = true,
-                            onClick = { Misc.openUriSafely(context, "https://zoot.plus") },
+                            onClick = { Misc.openUriSafely(context, "https://prts.plus") },
                         )
                     }
                 }
