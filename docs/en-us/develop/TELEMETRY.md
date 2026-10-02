@@ -9,7 +9,7 @@ The setting is **Settings → Third-party services → Help improve this project
 | Kind | When | Content |
 |---|---|---|
 | Run statistics | Every run | Name, duration and result of each task chain, plus the parameter summary described below |
-| Task failure | A task chain fails | The failing subtask and the recognition node it was stuck on; the logs of that task; in background mode, also the game screenshot MaaCore saved on failure |
+| Task failure | A task chain fails | The failing subtask and the recognition node it was stuck on; the logs of that task; in background mode, also the game screenshot MaaCore saved on failure: downscaled before upload, sent only once per run for the same failure, and on stable releases attached to only about one failure in five |
 | Start failure | Resource loading, instance creation, virtual display or connection fails | The failing stage; the logs of that run |
 | Service death | The Shizuku / Root process exits unexpectedly during a run | The task chain that was running; the logs of that run and MaaCore's `crash.log` |
 | Scheduled launch failure | A scheduled or externally triggered launch never reaches the tasks: validation fails, the UI cannot be brought up, the device cannot be unlocked, or the start fails | The result and reason, how late the trigger fired, and the trigger log of that attempt |

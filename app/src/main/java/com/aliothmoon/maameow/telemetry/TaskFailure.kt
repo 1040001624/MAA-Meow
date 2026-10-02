@@ -75,6 +75,18 @@ internal data class TaskFailure(
     private val nodeLabel: String?
         get() = node?.let { if (it.preTask.isNullOrBlank()) it.first else "${it.first}, after ${it.preTask}" }
 
+    /** Sentry 归组用的指纹；同一轮里也靠它认是不是同一个失败 */
+    val fingerprint: List<String>
+        get() = listOf(
+            TASK_FAILURE_FINGERPRINT,
+            taskChain,
+            subtask,
+            node?.first.orEmpty(),
+            node?.preTask.orEmpty(),
+            terminal?.what.orEmpty(),
+            exception.orEmpty(),
+        )
+
     override val logAttributes: Map<String, String>
         get() = mapOf(
             "task.chain" to taskChain,
@@ -95,15 +107,7 @@ internal data class TaskFailure(
                 (exception ?: nodeLabel ?: terminal?.what)?.let { append(" (").append(it).append(')') }
             }
         }
-        event.fingerprints = listOf(
-            TASK_FAILURE_FINGERPRINT,
-            taskChain,
-            subtask,
-            node?.first.orEmpty(),
-            node?.preTask.orEmpty(),
-            terminal?.what.orEmpty(),
-            exception.orEmpty(),
-        )
+        event.fingerprints = fingerprint
 
         event.putTags(
             tags + mapOf(

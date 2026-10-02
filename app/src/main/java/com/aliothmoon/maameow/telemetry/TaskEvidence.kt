@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.telemetry
 
 import java.io.IOException
+import kotlin.math.roundToInt
 
 /**
  * 失败证据：开跑时记下各日志的长度与已有的出错截图，失败后只取这之后新写的部分
@@ -25,8 +26,19 @@ internal object TaskEvidence {
     private const val MAX_IMAGE_RAW_BYTES = 8L * 1024 * 1024
     private const val MAX_IMAGE_TOTAL_BYTES = 2 * 1024 * 1024
 
+    /** 截图只用来认卡在哪个界面，短边 540 下界面文字仍看得清，体积是 720p 的四成上下 */
+    private const val IMAGE_SHORT_SIDE = 540
+
     const val IMAGE_DIR = "interface"
     private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg")
+
+    /** 上传前把截图缩到多大：短边不超过 [IMAGE_SHORT_SIDE]，只缩不放，保持比例 */
+    fun scaledImageSize(width: Int, height: Int): Pair<Int, Int> {
+        val shortSide = minOf(width, height)
+        if (shortSide <= IMAGE_SHORT_SIDE) return width to height
+        val scale = IMAGE_SHORT_SIDE.toDouble() / shortSide
+        return (width * scale).roundToInt() to (height * scale).roundToInt()
+    }
 
     /** [files] 的顺序即优先级，预算不够时先保前面的 */
     fun captureStart(store: EvidenceStore, files: List<EvidenceFile>): EvidenceStart = EvidenceStart(

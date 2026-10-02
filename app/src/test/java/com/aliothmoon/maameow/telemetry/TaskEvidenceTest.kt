@@ -181,6 +181,17 @@ class TaskEvidenceTest {
     }
 
     @Test
+    fun `截图短边缩到 540，只缩不放`() {
+        assertEquals(960 to 540, TaskEvidence.scaledImageSize(1280, 720))
+        assertEquals(960 to 540, TaskEvidence.scaledImageSize(1920, 1080))
+        // 竖着的画面按短边算
+        assertEquals(540 to 960, TaskEvidence.scaledImageSize(720, 1280))
+        assertEquals(1200 to 540, TaskEvidence.scaledImageSize(2400, 1080))
+        assertEquals(960 to 540, TaskEvidence.scaledImageSize(960, 540))
+        assertEquals(640 to 360, TaskEvidence.scaledImageSize(640, 360))
+    }
+
+    @Test
     fun `没有新截图时记下原因`() {
         write("interface/old.png", byteArrayOf(1))
         val start = start(coreLog)

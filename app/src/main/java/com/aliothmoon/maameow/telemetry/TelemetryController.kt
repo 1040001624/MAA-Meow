@@ -76,7 +76,7 @@ class TelemetryController(
         secrets = ::secrets,
         encodeImage = ::encodeJpeg,
         imagesAllowed = { settings.runMode.value == RunMode.BACKGROUND },
-        attachmentSampleRate = FAILURE_ATTACHMENT_SAMPLE_RATE,
+        attachmentSampleRate = failureAttachmentSampleRate(BuildConfig.VERSION_NAME, BuildConfig.DEBUG),
         send = ::send,
     )
 
@@ -299,14 +299,21 @@ class TelemetryController(
         chains = taskChainState.profiles.value.map { it.chain } + listOf(taskChainState.chain.value),
     )
 
-    /** Core 存的是 PNG，一张一兆上下，压成 JPEG 再带走 */
+    /** Core 存的是 PNG，一张一兆上下，缩小并压成 JPEG 再带走 */
     private fun encodeJpeg(bytes: ByteArray): ByteArray? = runCatching {
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        val source = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
         try {
-            ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
-                .toByteArray()
+            val (width, height) = TaskEvidence.scaledImageSize(source.width, source.height)
+            // 尺寸没变时返回的就是 source 本身
+            val scaled = Bitmap.createScaledBitmap(source, width, height, true)
+            try {
+                ByteArrayOutputStream().also { scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
+                    .toByteArray()
+            } finally {
+                if (scaled !== source) scaled.recycle()
+            }
         } finally {
-            bitmap.recycle()
+            source.recycle()
         }
     }.getOrNull()
 
@@ -314,13 +321,10 @@ class TelemetryController(
         /** 只按构建类型分；alpha / beta / 正式版靠 release 筛，不再跟用户的更新渠道设置走 */
         val ENVIRONMENT = if (BuildConfig.DEBUG) "dev" else "stable"
         const val JPEG_CONTENT_TYPE = "image/jpeg"
-        const val JPEG_QUALITY = 80
+        const val JPEG_QUALITY = 60
 
         /** 一轮一条事务、每条任务链一条 Span，量不大，全采 */
         const val TRACES_SAMPLE_RATE = 1.0
-
-        /** 失败事件带出错截图的比例；事件本身与日志不受它影响 */
-        const val FAILURE_ATTACHMENT_SAMPLE_RATE = 1.0
 
         val TRACKED_MESSAGES = setOf(
             AsstMsg.TaskChainStart,

@@ -43,9 +43,13 @@ internal class IncidentReporter(
     @Volatile
     private var sessionLog: EvidenceFile? = null
 
+    /** 这一轮里已经配过截图的失败；同一个失败反复出现时画面几乎一样，再带是白占附件额度 */
+    private val imagedFailures = HashSet<List<String>>()
+
     fun onRunStarted() {
         taskStart = null
         sessionLog = null
+        imagedFailures.clear()
         runStart = scope.async(workers + io) {
             val evidenceStore = store()
             val session = latestSessionLog(evidenceStore).also { sessionLog = it }
@@ -71,11 +75,18 @@ internal class IncidentReporter(
             // 启动失败与进程死亡看整轮的
             else -> runStart
         }
-        val withImages = failure != null && imagesAllowed() &&
-            shouldSampleAttachment(failure.runId, failure.taskId.toLong(), attachmentSampleRate)
+        // null = 去取截图
+        val noImages: AttachmentOutcome? = when {
+            failure == null || !imagesAllowed() -> AttachmentOutcome.NotSelected
+            !shouldSampleAttachment(failure.runId, failure.taskId.toLong(), attachmentSampleRate) ->
+                AttachmentOutcome.NotSelected
+            // 排在采样之后：没采到的那次不该挡住后面采到的
+            !imagedFailures.add(failure.fingerprint) -> DUPLICATE
+            else -> null
+        }
         scope.launch(workers + io) {
             val evidence = try {
-                collect(start, withImages)
+                collect(start, noImages)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -100,20 +111,17 @@ internal class IncidentReporter(
         runStart = null
         taskStart = null
         sessionLog = null
+        imagedFailures.clear()
     }
 
-    private suspend fun collect(start: Deferred<EvidenceStart>?, withImages: Boolean): Evidence {
+    private suspend fun collect(start: Deferred<EvidenceStart>?, noImages: AttachmentOutcome?): Evidence {
         val snapshot = start?.await() ?: return Evidence(null, AttachmentOutcome.NotSelected)
         // 遥测先于各处理器收到回调，等它们把那条出错日志落盘
         delay(LOG_SETTLE_MS)
         val evidenceStore = store()
         val logs = TaskEvidence.collectLogs(evidenceStore, snapshot)
             .redacted(SecretRedaction.redactable(secrets()))
-        val attachment = if (withImages) {
-            TaskEvidence.collectImages(evidenceStore, snapshot, encodeImage)
-        } else {
-            AttachmentOutcome.NotSelected
-        }
+        val attachment = noImages ?: TaskEvidence.collectImages(evidenceStore, snapshot, encodeImage)
         return Evidence(logs, attachment)
     }
 
@@ -140,6 +148,10 @@ internal class IncidentReporter(
         /** 会话日志按批落盘，周期不到 100ms */
         const val LOG_SETTLE_MS = 500L
 
+        val DUPLICATE = AttachmentOutcome.Omitted(
+            "duplicate", "the same failure already carried a screenshot in this run"
+        )
+
         val CORE_LOG = EvidenceFile("asst.log", kind = "maacore", core = true)
         val APP_LOG = EvidenceFile("error_logs/error.log", kind = "app", core = false)
 
@@ -162,6 +174,20 @@ internal class IncidentReporter(
         ) + taskFiles(session)
     }
 }
+
+/**
+ * 失败事件带出错截图的比例；事件本身与日志不受它影响
+ *
+ * 正式版量大，按附件额度抽样；预发布版与本地构建用户少，问题多数只出现一两次，抽样会让大半问题没图
+ */
+internal fun failureAttachmentSampleRate(versionName: String, debug: Boolean): Double =
+    if (!debug && STABLE_VERSION.matches(versionName)) STABLE_ATTACHMENT_SAMPLE_RATE else 1.0
+
+/** 附件额度每月 10 GB：按 2 万日活、每人每天两轮、每轮 0.35 条失败估，全带一个月要 20 GB 上下 */
+private const val STABLE_ATTACHMENT_SAMPLE_RATE = 0.2
+
+/** 正式版的版本名只有三段数字，预发布版带 `-beta.1` 这类后缀 */
+private val STABLE_VERSION = Regex("""\d+\.\d+\.\d+""")
 
 /** 按轮次与任务算哈希而不是掷随机数：同一个失败无论重算几次结论都一样 */
 internal fun shouldSampleAttachment(runId: String, taskId: Long, sampleRate: Double): Boolean {

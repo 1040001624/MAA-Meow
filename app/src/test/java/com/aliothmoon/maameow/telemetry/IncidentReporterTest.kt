@@ -126,6 +126,66 @@ class IncidentReporterTest {
         assertEquals("failed\n", evidence.logs?.entries?.single()?.content)
     }
 
+    /** 同一个失败反复出现时画面几乎一样，再带是白占附件额度 */
+    @Test
+    fun `同一轮里同一个失败只有第一次带截图`() = runTest(dispatcher) {
+        val reporter = reporter()
+        reporter.onRunStarted()
+        val outcomes = listOf(
+            failure,
+            failure.copy(taskId = 2),
+            failure.copy(taskId = 3, taskChain = "Fight"),
+        ).map { incident ->
+            reporter.onTaskStarted()
+            advanceUntilIdle()
+            write("interface/shot_${incident.taskId}.png", "image")
+            reporter.report(incident)
+            advanceUntilIdle()
+            sent.last().second.attachment
+        }
+
+        assertTrue(outcomes[0] is AttachmentOutcome.Attached)
+        assertEquals("duplicate", (outcomes[1] as AttachmentOutcome.Omitted).status)
+        // 换了个失败就不算重复
+        assertTrue(outcomes[2] is AttachmentOutcome.Attached)
+    }
+
+    @Test
+    fun `新一轮里同一个失败重新带截图`() = runTest(dispatcher) {
+        val reporter = reporter()
+        val outcomes = listOf(1, 2).map { round ->
+            reporter.onRunStarted()
+            reporter.onTaskStarted()
+            advanceUntilIdle()
+            write("interface/shot_$round.png", "image")
+            reporter.report(failure.copy(runId = "r$round"))
+            advanceUntilIdle()
+            sent.last().second.attachment
+        }
+
+        assertTrue(outcomes.all { it is AttachmentOutcome.Attached })
+    }
+
+    @Test
+    fun `没采到的那次不挡住后面采到的同一个失败`() = runTest(dispatcher) {
+        val rate = 0.5
+        val skipped = (1..200L).first { !shouldSampleAttachment("r1", it, rate) }.toInt()
+        val sampled = (1..200L).first { shouldSampleAttachment("r1", it, rate) }.toInt()
+        val reporter = reporter(sampleRate = rate)
+        reporter.onRunStarted()
+        val outcomes = listOf(skipped, sampled).map { taskId ->
+            reporter.onTaskStarted()
+            advanceUntilIdle()
+            write("interface/shot_$taskId.png", "image")
+            reporter.report(failure.copy(taskId = taskId))
+            advanceUntilIdle()
+            sent.last().second.attachment
+        }
+
+        assertEquals(AttachmentOutcome.NotSelected, outcomes[0])
+        assertTrue(outcomes[1] is AttachmentOutcome.Attached)
+    }
+
     /** 前台模式下 Core 截的是主屏，可能拍到别的应用 */
     @Test
     fun `不许带截图时只带日志`() = runTest(dispatcher) {
@@ -238,6 +298,17 @@ class IncidentReporterTest {
         advanceUntilIdle()
 
         assertTrue(sent.isEmpty())
+    }
+
+    @Test
+    fun `正式版抽样，预发布版与本地构建全带`() {
+        assertEquals(0.2, failureAttachmentSampleRate("0.23.0", debug = false), 0.0)
+        assertEquals(1.0, failureAttachmentSampleRate("0.23.0-beta.1", debug = false), 0.0)
+        assertEquals(1.0, failureAttachmentSampleRate("0.22.1-alpha.48", debug = false), 0.0)
+        // 没打上 tag 的构建版本名是提交哈希或 0.0.0-dev
+        assertEquals(1.0, failureAttachmentSampleRate("8f7cc0df", debug = false), 0.0)
+        assertEquals(1.0, failureAttachmentSampleRate("0.0.0-dev", debug = false), 0.0)
+        assertEquals(1.0, failureAttachmentSampleRate("0.23.0", debug = true), 0.0)
     }
 
     @Test
