@@ -1,24 +1,24 @@
 [versions]
 # Build Tools
-agp = "9.2.1"
+agp = "9.4.1"
 bom = "0.23.6"
-kotlin = "2.4.10"
-ksp = "2.3.9"
+kotlin = "2.4.20"
+ksp = "2.3.12"
 
 # AndroidX Core
-coreKtx = "1.19.0"
+coreKtx = "1.19.1"
 coreSplashscreen = "1.2.0"
 activityCompose = "1.13.0"
-appcompat = "1.7.1"
+appcompat = "1.8.0"
 material = "1.14.0"
 exifinterface = "1.4.2"
-kotlinpoet = "2.3.0"
-kotlinpoetKsp = "2.3.0"
+kotlinpoet = "2.4.0"
+kotlinpoetKsp = "2.4.0"
 lifecycle = "2.11.0"
 
 # Compose
-composeBom = "2026.05.01"
-navigationCompose = "2.9.8"
+composeBom = "2026.09.00"
+navigationCompose = "2.10.2"
 
 # Dependency Injection
 koin = "4.2.2"
@@ -31,22 +31,22 @@ window = "1.5.1"
 
 # Third-party libraries
 jna = "5.18.1" # new version uses reflection instead of handle keep 5.18.1
-fastjson2 = "2.0.64"
+fastjson2 = "2.0.65"
 shizuku = "13.1.5"
 libsu = "6.0.0"
 floatingX = "2.3.7"
 sonner = "0.4.0"
 timber = "5.0.1"
-okhttp = "5.4.0"
+okhttp = "5.5.0"
 angusMail = "2.0.5"
 angusActivation = "2.0.3"
 jakartaActivationApi = "2.1.4"
-sentry = "8.58.0"
+sentry = "8.59.0"
 
 # GitHub libraries
-composeMarkdown = "0.5.8"
-deviceCompat = "2.3"
-xxPermissions = "28.0"
+composeMarkdown = "0.7.2"
+deviceCompat = "2.6"
+xxPermissions = "28.3"
 reorderable = "3.1.0"
 
 # Kotlin libraries
