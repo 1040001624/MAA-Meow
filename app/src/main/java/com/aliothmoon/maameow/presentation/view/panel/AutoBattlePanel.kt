@@ -589,7 +589,7 @@ fun AutoBattlePanel(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            stringResource(R.string.panel_autobattle_battle_list),
+                            stringResource(R.string.panel_autobattle_copilot_list),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )

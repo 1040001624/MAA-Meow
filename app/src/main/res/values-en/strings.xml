@@ -390,24 +390,24 @@
     <string name="copilot_json_error">Copilot Json Error!</string>
     <string name="copilot_network_service_error">Request to the network service failed!</string>
     <string name="copilot_status_loaded">Copilot loaded: %1$s</string>
-    <string name="copilot_status_added_multi">Added %1$d tasks to the battle list</string>
+    <string name="copilot_status_added_multi">Added %1$d tasks to the job list</string>
     <string name="copilot_unknown_operator">Unknown Operator</string>
     <string name="copilot_status_added">Added: %1$s</string>
-    <string name="copilot_current_tab_battle_list_unsupported">The current tab does not support battle list</string>
-    <string name="copilot_enable_battle_list_first">Enable battle list first</string>
-    <string name="copilot_battle_list_unsupported">%1$s does not support battle list</string>
+    <string name="copilot_current_tab_battle_list_unsupported">The current tab does not support Multi-Job mode</string>
+    <string name="copilot_enable_battle_list_first">Enable Multi-Job mode first</string>
+    <string name="copilot_battle_list_unsupported">%1$s does not support Multi-Job mode</string>
     <string name="copilot_invalid_stage_name_for_navigation">Invalid stage name for navigation</string>
-    <string name="copilot_status_selected_list_item">Selected task from the battle list: %1$s</string>
+    <string name="copilot_status_selected_list_item">Selected task from the job list: %1$s</string>
     <string name="copilot_file_read_error">Failed to read file!</string>
     <string name="copilot_file_read_error_with_detail">Failed to read file: %1$s</string>
     <string name="copilot_status_started">Copilot started</string>
     <string name="copilot_empty_load_first">Copilot is empty. Load a homework first</string>
     <string name="copilot_type_mismatch">The selected Copilot job does not match the current tab</string>
-    <string name="copilot_empty_list">Using \";Battle list\";, but no tasks have been added</string>
-    <string name="copilot_mixed_list">Using \"Battle list\", mixing different Copilot types is not supported: %1$s</string>
-    <string name="copilot_list_ignored_warning">%1$d checked item(s) in the battle list, but \"Battle list\" is disabled. Only the current task will run</string>
+    <string name="copilot_empty_list">Using ｢Multi-Job mode｣, but no tasks have been added</string>
+    <string name="copilot_mixed_list">Currently using ｢Multi-Job mode｣. Mixing different job types is not supported: %1$s</string>
+    <string name="copilot_list_ignored_warning">%1$d checked item(s) in the job list, but ｢Multi-Job mode｣ is disabled. Only the current task will run</string>
     <string name="copilot_task_name_empty">Copilot jobs with empty names exist</string>
-    <string name="copilot_single_list_warning">You\'re using \";Battle list\"; to execute a single task, which is not recommended. For single tasks, run them directly instead.</string>
+    <string name="copilot_single_list_warning">You\'re using ｢Multi-Job mode｣ to execute a single task, which is not recommended. For single tasks, please run them directly instead.</string>
     <string name="copilot_unsupported_stage">Unsupported stage %1$s. If this is a stage from a new event, please wait for the map resource update before using auto-combat</string>
     <string name="copilot_unsupported_skill">%1$s does not support skill %2$d, skill selection disabled</string>
     <string name="copilot_elite_filled">%1$s has no elite requirement, but other requirements need E%2$d; filled in automatically</string>
@@ -839,8 +839,9 @@
     <string name="panel_autobattle_support_fill_gaps">When Needed</string>
     <string name="panel_autobattle_support_random">Random</string>
     <string name="panel_autobattle_add_trust">Add low-trust operators</string>
-    <string name="panel_autobattle_battle_list">Battle list</string>
-    <string name="panel_autobattle_battle_list_tip">Only supported in the following modes:\n  1. Main Theme: Navigate within the same chapter\n  2. Side Story: Navigate within the current page (Normal / EX / S cannot jump across pages)\n  3. Story Collection: Navigate within the current page\n  4. Paradox Simulation: Start from the operator list\nPlease start from the corresponding screen. Cross-chapter navigation is not supported.\n\nWhen \"Battle list\" is enabled, selecting a single homework automatically adds it to the list.</string>
+    <string name="panel_autobattle_battle_list">Multi-Job mode</string>
+    <string name="panel_autobattle_battle_list_tip">Only supported in the following modes:\n  1. Main Theme: Navigate within the same chapter\n  2. Side Story: Navigate within the current page (Normal / EX / S cannot jump across pages)\n  3. Story Collection: Navigate within the current page\n  4. Paradox Simulation: Start from the operator list\nPlease start from the corresponding screen. Cross-chapter navigation is not supported.\n\nWhen ｢Multi-Job mode｣ is enabled, individual jobs will be automatically added to the ｢Job List｣.</string>
+    <string name="panel_autobattle_copilot_list">Job List</string>
     <string name="panel_autobattle_use_sanity_potion">Use Sanity Potion</string>
     <string name="panel_autobattle_loop">Loop Times</string>
     <string name="panel_autobattle_sequence_tip">Jobs can be dragged</string>
@@ -849,7 +850,7 @@
     <string name="panel_autobattle_battle_list_inactive_hint">Disabled, only the current task runs</string>
     <string name="panel_autobattle_raid_suffix"> (Challenge)</string>
     <string name="panel_autobattle_tips_title">Tips</string>
-    <string name="panel_autobattle_tips_body">1. Make sure the loaded homework matches the selected stage type before starting.\n2. Main Theme, Story Collection, Side Story: start from the screen with the blue \"Start\" button in the bottom right.\n3. SSS: multiple built-in homework files are in resource/copilot. Form your squad manually first, then start from the screen with the \"Start Deployment\" button in the bottom right. It can be used together with \"Loop Times\".\n4. Paradox Simulation: after selecting skills, start from the skill selection screen with the \"Start Simulation\" button. For ½-star operators without skills, start from the screen with the bottom-right \"Start Simulation\" button. If using \"Battle list\", start from the operator list page.\n5. Other Activities: only single homework and regular Copilot settings are supported. Start directly from the target stage screen. Set import and battle list are not supported.\n6. When using support units, turn off \"Auto Squad\" and \"Battle list\". Select operators manually, then start from the squad screen with the \"Mission Start\" button.\n7. Operators marked as \"Favorite\" may affect \"Auto Squad\" recognition and selection. Consider removing favorites before using Auto Squad, or turn it off and add missing operators manually if prompted.\n8. Copilot codes can be entered in the input box:\n• Tap \"Read Homework\" to load a single homework.\n• Tap \"Read Set\" to import a homework set (Main Theme / Story Collection / Side Story, Paradox Simulation).\n9. Battle list:\n• After loading homework, check that the stage name below is correct (for example, CV-EX-1).\n• The add normal / add challenge buttons can be used to append tasks (challenge is only for Main Theme).\n• Use \"Clear List\" / \"Clear Unchecked\" to tidy the queue quickly.\n• Start from a screen where the target stage name is visible. Cross-chapter navigation is not supported.\n• The queue stops automatically if sanity is insufficient, battle fails, or the clear is not 3-star.</string>
+    <string name="panel_autobattle_tips_body">1. Make sure the loaded homework matches the selected stage type before starting.\n2. Main Theme, Story Collection, Side Story: start from the screen with the blue \"Start\" button in the bottom right.\n3. SSS: multiple built-in homework files are in resource/copilot. Form your squad manually first, then start from the screen with the \"Start Deployment\" button in the bottom right. It can be used together with \"Loop Times\".\n4. Paradox Simulation: after selecting skills, start from the skill selection screen with the \"Start Simulation\" button. For ½-star operators without skills, start from the screen with the bottom-right \"Start Simulation\" button. If using \"Multi-Job mode\", start from the operator list page.\n5. Other Activities: only single homework and regular Copilot settings are supported. Start directly from the target stage screen. Set import and Multi-Job mode are not supported.\n6. Operators marked as \"Favorite\" may affect \"Auto Squad\" recognition and selection. Consider removing favorites before using Auto Squad, or turn it off and add missing operators manually if prompted.\n7. Copilot codes can be pasted via the paste button on the right side of the input box, or typed in and loaded with \"Load Copilot\". Formats are auto-detected:\n• prts://s = Job set prts:// = Single job\n• Job sets are only supported for Main Theme / Story Collection / Side Story and Paradox Simulation.\n8. Multi-Job mode:\n• After loading homework, check that the stage name below is correct (for example, CV-EX-1).\n• Use \"Remove Unchecked\" / \"Clear List\" to tidy the queue quickly.\n• Start from a screen where the target stage name is visible. Cross-chapter navigation is not supported.\n• The queue stops automatically if sanity is insufficient, battle fails, or the clear is not 3-star.</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_visit_friends">Visit Friends</string>

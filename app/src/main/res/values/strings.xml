@@ -625,12 +625,12 @@
     <string name="copilot_json_error">解析作业文件错误！</string>
     <string name="copilot_network_service_error">请求网络服务错误！</string>
     <string name="copilot_status_loaded">作业加载成功: %1$s</string>
-    <string name="copilot_status_added_multi">已添加 %1$d 条作业到战斗列表</string>
+    <string name="copilot_status_added_multi">已添加 %1$d 条作业到作业列表</string>
     <string name="copilot_unknown_operator">未知干员</string>
     <string name="copilot_status_added">已添加: %1$s</string>
-    <string name="copilot_current_tab_battle_list_unsupported">当前页签不支持战斗列表</string>
-    <string name="copilot_enable_battle_list_first">请先启用战斗列表</string>
-    <string name="copilot_battle_list_unsupported">%1$s不支持战斗列表</string>
+    <string name="copilot_current_tab_battle_list_unsupported">当前页签不支持多作业模式</string>
+    <string name="copilot_enable_battle_list_first">请先启用多作业模式</string>
+    <string name="copilot_battle_list_unsupported">%1$s不支持多作业模式</string>
     <string name="copilot_invalid_stage_name_for_navigation">关卡名无效，无法导航</string>
     <string name="copilot_status_selected_list_item">已选中列表作业: %1$s</string>
     <string name="copilot_file_read_error">读取文件失败！</string>
@@ -638,11 +638,11 @@
     <string name="copilot_status_started">自动战斗已启动</string>
     <string name="copilot_empty_load_first">作业为空，请先读取作业</string>
     <string name="copilot_type_mismatch">当前选择的作业与页签不匹配</string>
-    <string name="copilot_empty_list">正在使用 ｢战斗列表｣, 但未添加任何作业</string>
-    <string name="copilot_mixed_list">正在使用 ｢战斗列表｣，不支持混用不同类型作业：%1$s</string>
-    <string name="copilot_list_ignored_warning">战斗列表中有 %1$d 项已勾选，但未启用 ｢战斗列表｣，本次将仅执行当前作业</string>
+    <string name="copilot_empty_list">正在使用 ｢多作业模式｣, 但未添加任何作业</string>
+    <string name="copilot_mixed_list">正在使用 ｢多作业模式｣，不支持混用不同类型作业：%1$s</string>
+    <string name="copilot_list_ignored_warning">作业列表中有 %1$d 项已勾选，但未启用 ｢多作业模式｣，本次将仅执行当前作业</string>
     <string name="copilot_task_name_empty">存在关卡名为空的作业</string>
-    <string name="copilot_single_list_warning">正在使用 ｢战斗列表｣ 执行单个作业, 不推荐此行为。 单个作业请直接运行</string>
+    <string name="copilot_single_list_warning">正在使用 ｢多作业模式｣ 执行单个作业, 不推荐此行为。 单个作业请直接运行</string>
     <string name="copilot_unsupported_stage">不支持的关卡 %1$s，如果是新活动的关卡，请等待地图资源更新后再使用自动战斗</string>
     <string name="copilot_unsupported_skill">%1$s 不支持技能 %2$d，已改为不选择技能</string>
     <string name="copilot_elite_filled">%1$s 未设置精英化要求，但其他要求需要 精%2$d，已自动补全</string>
@@ -893,8 +893,9 @@
     <string name="panel_autobattle_support_fill_gaps">补漏</string>
     <string name="panel_autobattle_support_random">随机</string>
     <string name="panel_autobattle_add_trust">补充低信赖干员</string>
-    <string name="panel_autobattle_battle_list">战斗列表</string>
-    <string name="panel_autobattle_battle_list_tip">仅支持以下模式:\n  1. 主线: 同一章节内导航\n  2. SideStory: 当前页面内导航（普通/EX/S 不能互跳）\n  3. 故事集: 当前页面内导航\n  4. 悖论模拟: 从干员列表启动\n请在对应界面启动，不支持跨章节导航\n\n当 ｢战斗列表｣ 启用后, 选择单个作业时会自动添加到 ｢战斗列表｣</string>
+    <string name="panel_autobattle_battle_list">多作业模式</string>
+    <string name="panel_autobattle_battle_list_tip">仅支持以下模式:\n  1. 主线: 同一章节内导航\n  2. SideStory: 当前页面内导航（普通/EX/S 不能互跳）\n  3. 故事集: 当前页面内导航\n  4. 悖论模拟: 从干员列表启动\n请在对应界面启动，不支持跨章节导航\n\n当 ｢多作业模式｣ 启用后, 选择单个作业时会自动添加到 ｢作业列表｣</string>
+    <string name="panel_autobattle_copilot_list">作业列表</string>
     <string name="panel_autobattle_use_sanity_potion">使用理智药</string>
     <string name="panel_autobattle_loop">循环次数</string>
     <string name="panel_autobattle_sequence_tip">标签顺序可拖动</string>
@@ -903,7 +904,7 @@
     <string name="panel_autobattle_battle_list_inactive_hint">未启用，仅执行当前作业</string>
     <string name="panel_autobattle_raid_suffix"> (突袭)</string>
     <string name="panel_autobattle_tips_title">小提示</string>
-    <string name="panel_autobattle_tips_body">1. 使用前请确认作业与所选的关卡类型一致。\n2. 主线、故事集、SideStory: 请在关卡界面的右下角存在 ｢开始行动｣ 按钮界面启动。\n3. 保全派驻: resource/copilot 文件夹内置多份作业。请先手动编队，在右下角存在 ｢开始部署｣ 按钮界面启动，可配合 ｢循环次数｣。\n4. 悖论模拟: 选好技能后，在技能选择界面存在 ｢开始模拟｣ 按钮界面启动，½ 星干员（无技能）在右下角存在 ｢开始模拟｣ 按钮界面开始。若使用 ｢战斗列表｣，请从干员列表 ｢等级/稀有度｣ 筛选下启动。\n5. 其他活动: 仅支持单作业与常规 Copilot 配置，请在目标活动关卡界面直接启动，不支持作业集和战斗列表。\n6. 使用好友助战时，请关闭 ｢自动编队｣ 和 ｢战斗列表｣，手动选择干员后，在编队界面右下角存在 ｢开始行动｣ 按钮界面启动。\n7. 干员若被标记为 ｢特别关注｣，可能影响 ｢自动编队｣ 的识别与选择。建议使用 ｢自动编队｣ 时移除关注，或在报错后关闭 ｢自动编队｣，根据提示手动补充缺失的干员。\n8. Copilot 作业站的神秘代码可在输入框输入后读取：\n• 点击「读取作业」= 读取单作业。\n• 点击「读取作业集」= 导入作业集（仅主线/故事集/SideStory、悖论模拟）。\n9. 战斗列表:\n• 选择作业后，检查下方关卡名是否正确 (例: CV-EX-1)。\n• 可通过「添加普通/添加突袭」按钮添加任务（突袭仅主线）。\n• 可通过「清空列表/清除未勾选」按钮快速整理任务。\n• 请在能看到目标关卡名的界面启动，不支持跨章节导航。\n• 遇到理智不足、战斗失败、未能三星结算时将自动中止。</string>
+    <string name="panel_autobattle_tips_body">1. 使用前请确认作业与所选的关卡类型一致。\n2. 主线、故事集、SideStory: 请在关卡界面的右下角存在 ｢开始行动｣ 按钮界面启动。\n3. 保全派驻: resource/copilot 文件夹内置多份作业。请先手动编队，在右下角存在 ｢开始部署｣ 按钮界面启动，可配合 ｢循环次数｣。\n4. 悖论模拟: 选好技能后，在技能选择界面存在 ｢开始模拟｣ 按钮界面启动，½ 星干员（无技能）在右下角存在 ｢开始模拟｣ 按钮界面开始。若使用 ｢多作业模式｣，请从干员列表 ｢等级/稀有度｣ 筛选下启动。\n5. 其他活动: 仅支持单作业与常规 Copilot 配置，请在目标活动关卡界面直接启动，不支持作业集和多作业模式。\n6. 干员若被标记为 ｢特别关注｣，可能影响 ｢自动编队｣ 的识别与选择。建议使用 ｢自动编队｣ 时移除关注，或在报错后关闭 ｢自动编队｣，根据提示手动补充缺失的干员。\n7. Copilot 作业站的神秘代码可通过输入框右侧的粘贴按钮粘贴，或输入后点击 ｢读取作业｣，自动识别格式：\n• prts://s = 作业集 prts:// = 单个作业\n• 作业集仅支持主线/故事集/SideStory、悖论模拟。\n8. 多作业模式:\n• 选择作业后，检查下方关卡名是否正确 (例: CV-EX-1)。\n• 可通过 ｢清除未勾选/清空列表｣ 按钮快速整理任务。\n• 请在能看到目标关卡名的界面启动，不支持跨章节导航。\n• 遇到理智不足、战斗失败、未能三星结算时将自动中止。</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_visit_friends">访问好友</string>
