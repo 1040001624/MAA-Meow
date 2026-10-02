@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
 import com.alibaba.fastjson2.JSONObject
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.data.config.MaaPathConfig
-import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.TaskChainState
@@ -33,8 +32,6 @@ import io.sentry.protocol.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -104,9 +101,7 @@ class TelemetryController(
         scope.launch {
             // 开关关着也记：用户反馈问题时可凭这行在后台按 user.id 定位
             Timber.i("[telemetry] 匿名设备 ID (Sentry user.id) = %s", TelemetryUserId.get(context))
-            combine(settings.telemetryEnabled, settings.updateChannel) { enabled, channel ->
-                if (enabled) environmentOf(channel) else null
-            }.distinctUntilChanged().collect(::reconfigure)
+            settings.telemetryEnabled.collect(::reconfigure)
         }
     }
 
@@ -240,7 +235,7 @@ class TelemetryController(
      *
      * 只由 [setup] 里那条 collect 串行调用，不会并发
      */
-    private fun reconfigure(environment: String?) {
+    private fun reconfigure(enabled: Boolean) {
         val wasActive = synchronized(lock) {
             tracer.reset()
             reporter.cancelAll()
@@ -251,16 +246,16 @@ class TelemetryController(
             Sentry.endSession()
             Sentry.close()
         }
-        if (environment == null) return
-        runCatching { init(environment) }
+        if (!enabled) return
+        runCatching { init() }
             .onFailure { Timber.w(it, "[telemetry] 初始化失败") }
             .onSuccess { synchronized(lock) { active = true } }
     }
 
-    private fun init(environment: String) {
+    private fun init() {
         SentryAndroid.init(context) { options ->
             options.dsn = BuildConfig.SENTRY_DSN
-            options.environment = environment
+            options.environment = ENVIRONMENT
             options.tracesSampleRate = TRACES_SAMPLE_RATE
             options.isSendDefaultPii = false
             // 只有出事时那份日志尾巴走 Sentry Logs，App 平时的日志不往这里写
@@ -315,11 +310,9 @@ class TelemetryController(
         }
     }.getOrNull()
 
-    private fun environmentOf(channel: UpdateChannel): String =
-        if (BuildConfig.DEBUG) DEV_ENVIRONMENT else channel.value
-
     private companion object {
-        const val DEV_ENVIRONMENT = "dev"
+        /** 只按构建类型分；alpha / beta / 正式版靠 release 筛，不再跟用户的更新渠道设置走 */
+        val ENVIRONMENT = if (BuildConfig.DEBUG) "dev" else "stable"
         const val JPEG_CONTENT_TYPE = "image/jpeg"
         const val JPEG_QUALITY = 80
 
