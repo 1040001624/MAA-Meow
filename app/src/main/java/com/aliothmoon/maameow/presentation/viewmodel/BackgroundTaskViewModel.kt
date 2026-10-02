@@ -58,7 +58,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.File
-import java.util.concurrent.atomic.AtomicReference
 
 class BackgroundTaskViewModel(
     val chainState: TaskChainState,
@@ -109,7 +108,8 @@ class BackgroundTaskViewModel(
     val state: StateFlow<BackgroundTaskState> = _state.asStateFlow()
     val logs: StateFlow<List<LogItem>> = sessionLogger.logs
 
-    private val surfaceRef = AtomicReference<Surface>()
+    private val previewSurface = PreviewSurfaceHandover()
+    val previewSurfaceEpoch: StateFlow<Int> = previewSurface.surfaceEpoch
 
     val isGameMuted: StateFlow<Boolean> = gameMuteCoordinator.isMuted
 
@@ -192,9 +192,7 @@ class BackgroundTaskViewModel(
     }
 
     fun onServiceReconnected(srv: RemoteService) {
-        if (surfaceRef.get() != null) {
-            onMonitorSurfaceChanged(srv)
-        }
+        previewSurface.onServiceConnected(srv)
         val enabled = appSettingsManager.showTouchPreview.value
         touchPreviewController.onTouchCallbackChange(enabled)
     }
@@ -243,28 +241,12 @@ class BackgroundTaskViewModel(
 
     // ==================== Surface ====================
 
-    private fun onMonitorSurfaceChanged(
-        service: RemoteService? = RemoteServiceManager.getInstanceOrNull()
-    ) {
-        val remote = service ?: return
-        val surface = surfaceRef.get()
-        Timber.d("onMonitorSurfaceChanged: surface=%s", surface)
-        runCatching {
-            remote.setMonitorSurface(surface)
-        }.onFailure {
-            Timber.w(it, "setMonitorSurface failed")
-        }
-    }
-
     fun onSurfaceAvailable(surface: Surface) {
-        surfaceRef.set(surface)
-        onMonitorSurfaceChanged()
+        previewSurface.attach(surface, RemoteServiceManager.getInstanceOrNull())
     }
 
     fun onSurfaceDestroyed() {
-        val surface = surfaceRef.getAndSet(null)
-        onMonitorSurfaceChanged()
-        surface?.release()
+        previewSurface.detach(RemoteServiceManager.getInstanceOrNull())?.release()
     }
 
     // ==================== Touch Input ====================

@@ -49,6 +49,7 @@ class RemoteServiceImpl : RemoteService.Stub() {
         private const val TAG = "RemoteService"
         private const val HEARTBEAT_INTERVAL_MS = 5_000L
         private const val JPEG_MAX_EDGE = 1280
+        private const val PREVIEW_SHUTDOWN_TIMEOUT_MS = 1_000L
 
         @JvmStatic
         fun performEmergencyCleanup() {
@@ -97,8 +98,27 @@ class RemoteServiceImpl : RemoteService.Stub() {
         InputControlUtils.setTouchCallback(null)
         GameFpsMonitor.stop()
         StaleFrameGuard.stop()
+        shutdownPreview()
         performEmergencyCleanup()
         exitProcess(0)
+    }
+
+    /**
+     * 退出前断开预览 Surface：SurfaceView 的缓冲队列认不出 producer 进程死了，不断开的话
+     * 这块 Surface 会一直算在本进程头上，下一个特权进程 `eglCreateWindowSurface` 报 already connected
+     *
+     * 排在 core 收尾之前：换资源档时新进程一秒多就会来接这块 Surface
+     * 限时：渲染线程可能正卡在 swap 上，等不到就走，不能拖住进程退出
+     */
+    private fun shutdownPreview() {
+        if (!NativeBridgeLib.LOADED) return
+        val worker = Thread { NativeBridgeLib.shutdownPreview() }.apply {
+            name = "preview-shutdown"
+            isDaemon = true
+            start()
+        }
+        runCatching { worker.join(PREVIEW_SHUTDOWN_TIMEOUT_MS) }
+        if (worker.isAlive) Ln.w("$TAG: preview shutdown still running after ${PREVIEW_SHUTDOWN_TIMEOUT_MS}ms, leaving it")
     }
 
     override fun exit() = destroy()

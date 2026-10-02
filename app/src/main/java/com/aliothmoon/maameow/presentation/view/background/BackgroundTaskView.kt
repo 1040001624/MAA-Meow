@@ -75,6 +75,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -342,42 +343,46 @@ fun BackgroundTaskView(
                 modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.aspectRatio(DefaultDisplayConfig.ASPECT_RATIO)) {
-                    AndroidView(
-                        factory = { ctx ->
-                            SurfaceView(ctx).apply {
-                                holder.setFormat(PixelFormat.RGBA_8888)
-                                holder.addCallback(object : SurfaceHolder.Callback {
-                                    override fun surfaceCreated(holder: SurfaceHolder) {
-                                        isSurfaceAvailable = true
-                                        innerScope.launch {
-                                            delay(50)
-                                            val res = currentResolution
-                                            holder.setFixedSize(res.width, res.height)
-                                        }
-                                    }
-
-                                    override fun surfaceChanged(
-                                        holder: SurfaceHolder, format: Int, width: Int, height: Int
-                                    ) {
-                                        Timber.d("Surface size changed to $width x $height")
-                                        val res = currentResolution
-                                        if (width == res.width && height == res.height) {
-                                            if (lastSentSurface != holder.surface) {
-                                                lastSentSurface = holder.surface
-                                                viewModel.onSurfaceAvailable(holder.surface)
+                    // 特权进程换了一个：旧 Surface 还连着上一个进程，新进程接不上，重建 SurfaceView
+                    val surfaceEpoch by viewModel.previewSurfaceEpoch.collectAsStateWithLifecycle()
+                    key(surfaceEpoch) {
+                        AndroidView(
+                            factory = { ctx ->
+                                SurfaceView(ctx).apply {
+                                    holder.setFormat(PixelFormat.RGBA_8888)
+                                    holder.addCallback(object : SurfaceHolder.Callback {
+                                        override fun surfaceCreated(holder: SurfaceHolder) {
+                                            isSurfaceAvailable = true
+                                            innerScope.launch {
+                                                delay(50)
+                                                val res = currentResolution
+                                                holder.setFixedSize(res.width, res.height)
                                             }
                                         }
-                                    }
 
-                                    override fun surfaceDestroyed(holder: SurfaceHolder) {
-                                        isSurfaceAvailable = false
-                                        lastSentSurface = null
-                                        viewModel.onSurfaceDestroyed()
-                                    }
-                                })
-                            }
-                        }, modifier = Modifier.fillMaxSize()
-                    )
+                                        override fun surfaceChanged(
+                                            holder: SurfaceHolder, format: Int, width: Int, height: Int
+                                        ) {
+                                            Timber.d("Surface size changed to $width x $height")
+                                            val res = currentResolution
+                                            if (width == res.width && height == res.height) {
+                                                if (lastSentSurface != holder.surface) {
+                                                    lastSentSurface = holder.surface
+                                                    viewModel.onSurfaceAvailable(holder.surface)
+                                                }
+                                            }
+                                        }
+
+                                        override fun surfaceDestroyed(holder: SurfaceHolder) {
+                                            isSurfaceAvailable = false
+                                            lastSentSurface = null
+                                            viewModel.onSurfaceDestroyed()
+                                        }
+                                    })
+                                }
+                            }, modifier = Modifier.fillMaxSize()
+                        )
+                    }
                     // 必须重新读，movableContent 是 remember 出来的，捕获外层 val 会拿到陈旧值
                     if (!LocalIsInPip.current && markers.isNotEmpty()) TouchPreviewOverlay(
                         markers = markers,
