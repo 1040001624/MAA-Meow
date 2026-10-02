@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -37,14 +38,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,7 @@ import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.theme.MaaAnimatedVisibility
+import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -193,7 +196,8 @@ private fun ProfileCard(
     onDuplicate: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val profileIdCopiedText = stringResource(R.string.panel_profile_id_copied)
     Card(
@@ -332,7 +336,9 @@ private fun ProfileCard(
                         )
                         IconButton(
                             onClick = {
-                                clipboardManager.setText(AnnotatedString(profile.id))
+                                scope.launch {
+                                    clipboard.setClipEntry(ClipData.newPlainText("label", profile.id).toClipEntry())
+                                }
                                 Toast.makeText(context, profileIdCopiedText, Toast.LENGTH_SHORT)
                                     .show()
                             },

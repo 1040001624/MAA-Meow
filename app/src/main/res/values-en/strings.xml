@@ -2191,7 +2191,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="achievement_MaaMeowFirstTaskComplete_title">Our First Voyage</string>
     <string name="achievement_MaaMeowFirstTaskComplete_desc">The first task reached its destination.</string>
     <string name="achievement_MaaMeowFirstTaskComplete_condition">Complete a task with Maa-Meow successfully for the first time</string>
-    <string name="achievement_MirrorChyanFirstUse_title">Mirror～～☆</string>
+    <string name="achievement_MirrorChyanFirstUse_title">Mirror~~☆</string>
     <string name="achievement_MirrorChyanFirstUse_desc">It\'s MirrorChyan! We\'re saved!</string>
     <string name="achievement_MirrorChyanFirstUse_condition">Successfully use MirrorChyan for the first time</string>
     <string name="achievement_MirrorChyanCdkError_title">Is This... Right?</string>

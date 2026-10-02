@@ -16,9 +16,9 @@ class PrefSchemaProcessor(
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val symbols = resolver.getSymbolsWithAnnotation(PrefSchema::class.qualifiedName!!)
-        val unableToProcess = symbols.filterNot { it.validate() }.toList()
+        val unableToProcess = symbols.filterNot { it.validate(enableNewFeatures = false) }.toList()
 
-        symbols.filter { it is KSClassDeclaration && it.validate() }
+        symbols.filter { it is KSClassDeclaration && it.validate(enableNewFeatures = false) }
             .forEach { symbol ->
                 val classDecl = symbol as KSClassDeclaration
                 processClass(classDecl)

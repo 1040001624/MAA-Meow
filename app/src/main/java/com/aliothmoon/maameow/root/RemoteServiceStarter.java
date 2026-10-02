@@ -21,6 +21,8 @@ public final class RemoteServiceStarter {
     private RemoteServiceStarter() {
     }
 
+    // app_process 进程没有系统建好的主 Looper，只能自己建
+    @SuppressWarnings("deprecation")
     public static void main(String[] args) {
         System.err.println("[" + TAG + "] main() entry");
         if (Looper.getMainLooper() == null) {

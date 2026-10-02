@@ -22,6 +22,7 @@ import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import io.sentry.Attachment
 import io.sentry.Hint
+import io.sentry.KeyValueCollectionBehavior
 import io.sentry.Sentry
 import io.sentry.SentryAttributes
 import io.sentry.SentryOptions
@@ -257,7 +258,19 @@ class TelemetryController(
             options.dsn = BuildConfig.SENTRY_DSN
             options.environment = ENVIRONMENT
             options.tracesSampleRate = TRACES_SAMPLE_RATE
-            options.isSendDefaultPii = false
+            // 替代已弃用的 sendDefaultPii = false；配了任一项，没配的就回落到 Sentry 默认（多为开），所以逐项关掉
+            options.dataCollection.apply {
+                userInfo = false
+                filePaths = false
+                databaseQueryData = false
+                cookies = KeyValueCollectionBehavior.off()
+                urlQueryParams = KeyValueCollectionBehavior.off()
+                httpBodies = emptySet()
+                httpHeaders.request = KeyValueCollectionBehavior.off()
+                httpHeaders.response = KeyValueCollectionBehavior.off()
+                graphql.document = false
+                graphql.variables = false
+            }
             // 只有出事时那份日志尾巴走 Sentry Logs，App 平时的日志不往这里写
             options.logs.isEnabled = true
             options.logs.beforeSend = SentryOptions.Logs.BeforeSendLogCallback { it.apply { bindDiagnosticTrace() } }

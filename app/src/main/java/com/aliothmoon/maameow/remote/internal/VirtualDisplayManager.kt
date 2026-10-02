@@ -143,7 +143,7 @@ object VirtualDisplayManager {
         Ln.i(
             "VD created: id=$vdId" +
                     ", configured=${cfg.width}x${cfg.height}" +
-                    ", actual=${d.width}x${d.height}" +
+                    ", actual=${d.mode.physicalWidth}x${d.mode.physicalHeight}" +
                     ", rotation=${d.rotation}" +
                     ", flags=0x${flags.toString(16)}"
         )
