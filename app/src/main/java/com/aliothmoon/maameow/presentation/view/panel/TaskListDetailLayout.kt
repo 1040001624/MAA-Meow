@@ -57,6 +57,7 @@ fun TaskListDetailLayout(
     modifier: Modifier = Modifier,
     /** 后台任务页右侧配置区包一层 Card；悬浮窗已有外层 Card 时关闭 */
     wrapDetailInCard: Boolean = false,
+    runFromNodeBlocked: Boolean = false,
 ) {
     val configuration = LocalConfiguration.current
     // 与 OverlayController.calculatePanelLayout 一致：浮窗约 0.85 屏宽
@@ -118,6 +119,7 @@ fun TaskListDetailLayout(
                     onCreateProfile = onCreateProfile,
                     onReorderProfile = onReorderProfile,
                     modifier = Modifier.fillMaxSize(),
+                    runFromNodeBlocked = runFromNodeBlocked,
                 )
             }
         }

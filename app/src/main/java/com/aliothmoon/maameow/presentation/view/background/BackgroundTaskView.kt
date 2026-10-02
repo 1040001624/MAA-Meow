@@ -587,6 +587,7 @@ fun BackgroundTaskView(
                                             onReorderProfile = viewModel::onReorderProfile,
                                             modifier = Modifier.fillMaxSize(),
                                             wrapDetailInCard = true,
+                                            runFromNodeBlocked = startBlocked,
                                         )
                                     }
 

@@ -69,6 +69,7 @@ import com.aliothmoon.maameow.presentation.view.panel.mall.MallConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.roguelike.RoguelikeConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.switchtheme.SwitchThemeConfigPanel
 import com.aliothmoon.maameow.presentation.view.panel.userdata.UserDataUpdateConfigPanel
+import com.aliothmoon.maameow.theme.MaaThemeAlphas
 
 @Composable
 fun TaskConfigPanel(
@@ -92,7 +93,9 @@ fun TaskConfigPanel(
     onDeleteProfile: (String) -> Unit,
     onCreateProfile: () -> Unit,
     onReorderProfile: (Int, Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 启动条件不满足：「从此处运行」显示为禁用态，点击只提示 */
+    runFromNodeBlocked: Boolean = false,
 ) {
     Box(modifier = modifier) {
         when {
@@ -119,6 +122,7 @@ fun TaskConfigPanel(
                 TaskManagementView(
                     node = selectedNode,
                     canRunFromHere = canRunFromNode,
+                    runFromHereBlocked = runFromNodeBlocked,
                     onRename = { onRenameNode(selectedNode.id, it) },
                     onRunFromHere = { onRunFromNode(selectedNode.id) },
                     onDuplicate = { onDuplicateNode(selectedNode.id) },
@@ -302,6 +306,7 @@ private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
 private fun TaskManagementView(
     node: TaskChainNode,
     canRunFromHere: Boolean,
+    runFromHereBlocked: Boolean,
     onRename: (String) -> Unit,
     onRunFromHere: () -> Unit,
     onDuplicate: () -> Unit,
@@ -385,7 +390,16 @@ private fun TaskManagementView(
             onClick = onRunFromHere,
             enabled = canRunFromHere,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(4.dp)
+            shape = RoundedCornerShape(4.dp),
+            colors = if (runFromHereBlocked) {
+                ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurface.copy(
+                        alpha = MaaThemeAlphas.DISABLED
+                    )
+                )
+            } else {
+                ButtonDefaults.outlinedButtonColors()
+            }
         ) {
             Icon(
                 Icons.Default.PlayArrow,
