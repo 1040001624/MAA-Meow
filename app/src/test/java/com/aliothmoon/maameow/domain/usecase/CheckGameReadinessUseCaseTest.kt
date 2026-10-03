@@ -27,12 +27,14 @@ class CheckGameReadinessUseCaseTest {
         runMode: RunMode = RunMode.BACKGROUND,
         isPackageInstalled: suspend (String) -> Boolean = { true },
         isEyeProtectionEnabled: () -> Boolean = { false },
+        isSmartResolutionEnabled: suspend () -> Boolean = { false },
     ) = CheckGameReadinessUseCase(
         appAliveChecker = FakeAppAliveChecker(aliveStatus, onBackgroundDisplay),
         appSettings = appSettings(runMode),
         achievementReporter = achievementReporter,
         isPackageInstalled = isPackageInstalled,
         isEyeProtectionEnabled = isEyeProtectionEnabled,
+        isSmartResolutionEnabled = isSmartResolutionEnabled,
     )
 
     private fun context(
@@ -202,6 +204,52 @@ class CheckGameReadinessUseCaseTest {
         )
 
         assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)
+    }
+
+    @Test
+    fun smartResolutionEnabled_backgroundManual_requiresConfirmation() = runBlocking {
+        val result = useCase(isSmartResolutionEnabled = { true })("Official", false, context())
+
+        assertEquals(
+            GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED),
+            result
+        )
+    }
+
+    @Test
+    fun smartResolutionEnabled_foreground_skipped() = runBlocking {
+        val result = useCase(runMode = RunMode.FOREGROUND, isSmartResolutionEnabled = { true })(
+            "Official",
+            false,
+            context()
+        )
+
+        assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)
+    }
+
+    @Test
+    fun smartResolutionEnabled_scheduled_autoReady() = runBlocking {
+        val result = useCase(isSmartResolutionEnabled = { true })(
+            "Official",
+            false,
+            context(TaskStartMode.SCHEDULED)
+        )
+
+        assertEquals(GameReadiness.Ready(gameAliveBeforeStart = true), result)
+    }
+
+    @Test
+    fun smartResolutionAcknowledged_thenEyeProtectionStillAsked() = runBlocking {
+        val result = useCase(isEyeProtectionEnabled = { true }, isSmartResolutionEnabled = { true })(
+            "Official",
+            false,
+            context(acks = setOf(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED))
+        )
+
+        assertEquals(
+            GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED),
+            result
+        )
     }
 
     private class FakeAppAliveChecker(

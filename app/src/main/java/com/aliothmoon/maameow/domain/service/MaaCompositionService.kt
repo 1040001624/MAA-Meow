@@ -698,6 +698,15 @@ class MaaCompositionService(
 
             try {
                 useRemoteService { service ->
+                    if (mode == RunMode.BACKGROUND
+                        && runCatching { service.isSmartResolutionEnabled() }.getOrDefault(false)
+                    ) {
+                        sessionLogger.appendAndWait(
+                            context.getString(R.string.task_start_smart_resolution_warning_log),
+                            LogLevel.WARNING
+                        )
+                        Timber.w("smart resolution enabled at runtime (low_resolution_switch=1)")
+                    }
                     val maa = service.maaCoreService
                     ensureMaaInstance(maa)?.let { return@useRemoteService it }
 

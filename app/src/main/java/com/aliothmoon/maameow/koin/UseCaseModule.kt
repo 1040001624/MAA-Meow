@@ -47,6 +47,16 @@ val useCaseModule = module {
                 }
             },
             isEyeProtectionEnabled = { EyeProtectionDetector.isEyeProtectionEnabled(androidContext()) },
+            isSmartResolutionEnabled = {
+                withContext(Dispatchers.IO) {
+                    try {
+                        RemoteServiceManager.getInstanceOrNull()?.isSmartResolutionEnabled() ?: false
+                    } catch (e: Exception) {
+                        Timber.w(e, "isSmartResolutionEnabled check failed")
+                        false
+                    }
+                }
+            },
         )
     }
     factory {

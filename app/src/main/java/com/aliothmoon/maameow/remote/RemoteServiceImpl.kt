@@ -32,6 +32,7 @@ import com.aliothmoon.maameow.remote.internal.UserDirProbe
 import com.aliothmoon.maameow.remote.internal.VirtualDisplayManager
 import com.aliothmoon.maameow.remote.internal.WakeUnlockController
 import com.aliothmoon.maameow.remote.internal.XmsfFirewall
+import com.aliothmoon.maameow.third.Command
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.aliothmoon.maameow.third.Workarounds
@@ -482,6 +483,15 @@ class RemoteServiceImpl : RemoteService.Stub() {
             true
         } catch (e: Exception) {
             Ln.w("$TAG: isPackageInstalled: $packageName not found", e)
+            false
+        }
+    }
+
+    override fun isSmartResolutionEnabled(): Boolean {
+        return try {
+            Command.execReadLine("settings", "get", "global", "low_resolution_switch")?.trim() == "1"
+        } catch (e: Exception) {
+            Ln.w("$TAG: read low_resolution_switch failed", e)
             false
         }
     }

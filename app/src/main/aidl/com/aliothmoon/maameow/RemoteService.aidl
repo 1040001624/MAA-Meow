@@ -118,4 +118,6 @@ interface RemoteService {
 
     // 当前帧编码为 JPEG 直接回传，无帧或失败返回 null；外部通知附图用
     byte[] captureFrameJpeg(int quality) = 51;
+
+    boolean isSmartResolutionEnabled() = 52;
 }

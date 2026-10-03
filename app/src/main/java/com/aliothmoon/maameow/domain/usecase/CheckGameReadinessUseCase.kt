@@ -20,6 +20,7 @@ class CheckGameReadinessUseCase(
     private val achievementReporter: AchievementReporter,
     private val isPackageInstalled: suspend (String) -> Boolean = { true },
     private val isEyeProtectionEnabled: () -> Boolean = { false },
+    private val isSmartResolutionEnabled: suspend () -> Boolean = { false },
 ) {
     /**
      * @param clientType   游戏客户端类型(用于解析包名)
@@ -98,10 +99,17 @@ class CheckGameReadinessUseCase(
         }
     }
 
-    private fun checkEyeProtectionOrReady(
+    private suspend fun checkEyeProtectionOrReady(
         context: TaskStartContext,
         gameAliveBeforeStart: Boolean?,
     ): GameReadiness {
+        if (context.mode == TaskStartMode.MANUAL
+            && appSettings.runMode.value == RunMode.BACKGROUND
+            && !context.acknowledgements.contains(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED)
+            && isSmartResolutionEnabled()
+        ) {
+            return GameReadiness.RequiresConfirmation(TaskStartAcknowledgement.SMART_RESOLUTION_ENABLED)
+        }
         if (context.mode == TaskStartMode.MANUAL
             && !context.acknowledgements.contains(TaskStartAcknowledgement.EYE_PROTECTION_ENABLED)
             && isEyeProtectionEnabled()
