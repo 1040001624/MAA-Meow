@@ -28,7 +28,8 @@ data class UnlockGesture(
             val gesture = runCatching {
                 JsonUtils.common.decodeFromString(serializer(), json)
             }.getOrElse {
-                onDrop("malformed gesture json: ${it.message}")
+                // 异常信息会带一段 JSON 原文，也就是解锁轨迹，不能进日志
+                onDrop("malformed gesture json: ${it.javaClass.simpleName}")
                 return null
             }
             if (gesture.version != VERSION) {

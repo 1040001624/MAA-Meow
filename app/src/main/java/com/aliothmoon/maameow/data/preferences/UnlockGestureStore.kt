@@ -1,6 +1,9 @@
 package com.aliothmoon.maameow.data.preferences
 
 import android.content.Context
+import android.util.AtomicFile
+import androidx.core.util.readText
+import androidx.core.util.writeText
 import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.service.UnlockGestureReader
 import com.aliothmoon.maameow.utils.JsonUtils
@@ -46,7 +49,8 @@ class UnlockGestureStore(private val context: Context) : UnlockGestureReader {
                 runCatching {
                     val file = gestureFile
                     file.parentFile?.mkdirs()
-                    file.writeText(
+                    // 写一半被杀会留下截断的 JSON，下次读出来就是「未录制」
+                    AtomicFile(file).writeText(
                         JsonUtils.common.encodeToString(UnlockGesture.serializer(), gesture),
                     )
                 }.onFailure { Timber.e(it, "save unlock gesture failed") }
@@ -58,7 +62,7 @@ class UnlockGestureStore(private val context: Context) : UnlockGestureReader {
     suspend fun clear() {
         writeMutex.withLock {
             withContext(Dispatchers.IO) {
-                runCatching { gestureFile.delete() }
+                runCatching { AtomicFile(gestureFile).delete() }
                     .onFailure { Timber.w(it, "clear unlock gesture failed") }
             }
         }
@@ -72,8 +76,9 @@ class UnlockGestureStore(private val context: Context) : UnlockGestureReader {
 
     private suspend fun read(): UnlockGesture? = withContext(Dispatchers.IO) {
         val file = gestureFile
-        if (!file.isFile) return@withContext null
-        val text = runCatching { file.readText() }.getOrElse {
+        // 改名前被杀时只剩 .bak，AtomicFile 读的时候会自己回滚
+        if (!file.isFile && !File(file.path + ".bak").isFile) return@withContext null
+        val text = runCatching { AtomicFile(file).readText() }.getOrElse {
             Timber.w(it, "unlock gesture unreadable")
             return@withContext null
         }

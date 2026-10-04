@@ -2446,6 +2446,7 @@ MAA will not end an in-progress exploration early because this option is uncheck
     <string name="wake_result_ipc_failed">Elevated service not connected</string>
     <string name="wake_result_task_running">A task is running. Stop it before testing or recording</string>
     <string name="wake_result_record_busy">The previous recording is still wrapping up. Try again in a moment</string>
+    <string name="wake_result_unknown">The elevated service returned an unrecognized result. Restart the elevated service and try again</string>
     <string name="wake_result_gesture_empty">No unlock gesture recorded yet</string>
     <string name="wake_result_gesture_screen_mismatch">Screen orientation or resolution differs from the recording; please record again</string>
     <string name="wake_result_record_no_device">Cannot read the touchscreen input device on this system; use the Root backend or a PIN instead</string>

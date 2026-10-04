@@ -63,13 +63,19 @@ class WakeUnlockEngine {
         IPC_FAILED(-1, uiTextOf(R.string.wake_result_ipc_failed)),
 
         /** App 侧拦截：任务运行中锁屏或注入会打断任务 */
-        TASK_RUNNING(-2, uiTextOf(R.string.wake_result_task_running));
+        TASK_RUNNING(-2, uiTextOf(R.string.wake_result_task_running)),
+
+        /** 提权侧返回了本端不认识的码，多半是两端版本不一致 */
+        UNKNOWN(-3, uiTextOf(R.string.wake_result_unknown));
 
         val isSuccess: Boolean get() = this == OK
 
         companion object {
             fun fromCode(code: Int): WakeResult =
-                entries.firstOrNull { it.code == code } ?: IPC_FAILED
+                entries.firstOrNull { it.code == code && it.code >= 0 } ?: run {
+                    Timber.w("unknown wake result code: %d", code)
+                    UNKNOWN
+                }
         }
     }
 

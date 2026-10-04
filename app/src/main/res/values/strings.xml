@@ -2503,6 +2503,7 @@ MAA 不会因为取消勾选此选项而提前在局内结束探索</string>
     <string name="wake_result_ipc_failed">提权服务未连接</string>
     <string name="wake_result_task_running">任务运行中，请先停止任务再测试或录制</string>
     <string name="wake_result_record_busy">上一次录制还在收尾，请稍后再试</string>
+    <string name="wake_result_unknown">提权服务返回了无法识别的结果，请重启提权服务后再试</string>
     <string name="wake_result_gesture_empty">尚未录制解锁手势</string>
     <string name="wake_result_gesture_screen_mismatch">屏幕方向或分辨率与录制时不一致，请重新录制</string>
     <string name="wake_result_record_no_device">读不到触摸屏输入设备，当前系统不允许；可改用 Root 启动方式或 PIN</string>
