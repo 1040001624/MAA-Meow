@@ -54,6 +54,8 @@ class ScheduleTriggerHandler(
 
         if (strategy == null) {
             Timber.w("Schedule strategy missing: %s", strategyId)
+            // 规则已删，连同在等的重试一起撤
+            alarmManager.cancel(strategyId)
             triggerLogger.writeClosed(
                 strategyId = strategyId,
                 strategyName = strategyId,
@@ -66,9 +68,11 @@ class ScheduleTriggerHandler(
         }
         if (!strategy.enabled) {
             Timber.i("Skip disabled schedule: %s", strategyId)
+            alarmManager.cancel(strategyId)
             return
         }
 
+        alarmManager.markFired(strategy.id, scheduledTimeMs)
         // 本次启动挂起或进程被杀，也保留下次闹钟
         alarmManager.scheduleNext(strategy, scheduledTimeMs)
         val request = LaunchIntentMapper.fromStrategy(strategy, scheduledTimeMs)

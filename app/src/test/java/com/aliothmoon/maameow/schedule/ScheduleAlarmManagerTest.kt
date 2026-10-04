@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
@@ -23,8 +24,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.ZoneId
 import java.time.ZonedDateTime
+
+private const val RESYNC_CODE = 0x5C4E
 
 class ScheduleAlarmManagerTest {
     private val platformAlarms = mockk<AlarmManager>(relaxed = true)
@@ -103,7 +107,55 @@ class ScheduleAlarmManagerTest {
         }
         assertTrue(alarms.scheduleRetry(strategy.id, 123L, retryCount = ScheduleAlarmManager.MAX_RETRY_COUNT - 1))
         assertFalse(alarms.scheduleRetry(strategy.id, 123L, retryCount = ScheduleAlarmManager.MAX_RETRY_COUNT))
-        verify(exactly = 2) { platformAlarms.setAlarmClock(any(), any()) }
+        // 用尽不再拉 FGS，但要挂一个重排闹钟把定时链接上
+        verify(exactly = 3) { platformAlarms.setAlarmClock(any(), any()) }
+        verify(exactly = 1) { platformAlarms.setAlarmClock(any(), slotFor(RESYNC_CODE)) }
+    }
+
+    @Test
+    fun rescheduleKeepsPendingRetry_butDisableDropsIt() {
+        prepareRegistration()
+        mockFiredPrefs(emptyMap())
+
+        alarms.rescheduleAll(listOf(strategy))
+        verify { platformAlarms.cancel(slotFor(nextCode("daily"))) }
+        verify(exactly = 0) { platformAlarms.cancel(slotFor(retryCode("daily"))) }
+
+        alarms.rescheduleAll(listOf(strategy.copy(enabled = false)))
+        verify { platformAlarms.cancel(slotFor(retryCode("daily"))) }
+    }
+
+    @Test
+    fun rescheduleAfterClockRollbackSkipsAlreadyFiredSlot() {
+        // 时钟回拨后，已跑过的时段仍在「未来」，应排到明天而不是今天再跑一次
+        val fired = ZonedDateTime.now(ZoneId.systemDefault()).plusMinutes(30).withSecond(0).withNano(0)
+        val firedMs = fired.toInstant().toEpochMilli()
+        val tomorrow = fired.plusDays(1).toInstant().toEpochMilli()
+        prepareRegistration(tomorrow)
+        val daily = strategy.copy(
+            scheduleType = ScheduleType.FIXED_TIME,
+            daysOfWeek = DayOfWeek.entries.toSet(),
+            executionTimes = listOf(fired.toLocalTime()),
+        )
+
+        val after = ScheduleAlarmManager.resumeAfter(daily, firedMs, System.currentTimeMillis())
+        assertEquals(firedMs, after)
+        assertTrue(alarms.scheduleNext(daily, after))
+        verifyAlarmClockAt(tomorrow)
+    }
+
+    @Test
+    fun resumeAfterOnlyHonorsRollbackWithinOneCycle() {
+        val now = 1_000_000_000L
+        val hourly = strategy.copy(intervalMinutes = 60)
+        val daily = strategy.copy(scheduleType = ScheduleType.FIXED_TIME)
+        assertEquals(0L, ScheduleAlarmManager.resumeAfter(hourly, null, now))
+        assertEquals(0L, ScheduleAlarmManager.resumeAfter(hourly, now - 1, now))
+        assertEquals(now + 3_600_000L, ScheduleAlarmManager.resumeAfter(hourly, now + 3_600_000L, now))
+        assertEquals(0L, ScheduleAlarmManager.resumeAfter(hourly, now + 3_600_001L, now))
+        val dayMs = ScheduleAlarmManager.FIXED_RESUME_WINDOW_MS
+        assertEquals(now + dayMs, ScheduleAlarmManager.resumeAfter(daily, now + dayMs, now))
+        assertEquals(0L, ScheduleAlarmManager.resumeAfter(daily, now + dayMs + 1, now))
     }
 
     private fun prepareRegistration(triggerTime: Long? = null) {
@@ -116,7 +168,9 @@ class ScheduleAlarmManagerTest {
         every { anyConstructed<Intent>().putExtra(any<String>(), any<Long>()) } answers { self as Intent }
         every { anyConstructed<Intent>().putExtra(any<String>(), any<Int>()) } answers { self as Intent }
         mockkStatic(PendingIntent::class)
-        every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
+        every { PendingIntent.getBroadcast(any(), any(), any(), any()) } answers {
+            slots.getOrPut(secondArg()) { mockk(relaxed = true) }
+        }
         every { PendingIntent.getActivity(any(), any(), any(), any()) } returns mockk()
         mockkConstructor(AlarmManager.AlarmClockInfo::class)
         if (triggerTime != null) {
@@ -127,6 +181,21 @@ class ScheduleAlarmManagerTest {
                 ).triggerTime
             } returns triggerTime
         }
+    }
+
+    private val slots = mutableMapOf<Int, PendingIntent>()
+
+    private fun slotFor(requestCode: Int): PendingIntent =
+        slots.getOrPut(requestCode) { mockk(relaxed = true) }
+
+    private fun nextCode(id: String) = id.hashCode() and 0x7FFFFFFF
+    private fun retryCode(id: String) = "$id#retry".hashCode() and 0x7FFFFFFF
+
+    private fun mockFiredPrefs(fired: Map<String, Long>) {
+        val prefs = mockk<SharedPreferences>(relaxed = true) {
+            every { all } returns fired
+        }
+        every { context.getSharedPreferences(any(), any()) } returns prefs
     }
 
     private fun verifyAlarmClockAt(triggerTime: Long) {

@@ -112,13 +112,14 @@
             </intent-filter>
         </receiver>
 
-        <!-- 开机或应用更新后恢复定时任务 -->
+        <!-- 开机、应用更新或时区变更后恢复定时任务；重排闹钟显式投递，无需声明 -->
         <receiver
             android:name=".schedule.receiver.BootReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>

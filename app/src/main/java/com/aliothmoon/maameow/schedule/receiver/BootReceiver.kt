@@ -16,14 +16,14 @@ import org.koin.core.context.GlobalContext
 import timber.log.Timber
 
 /**
- * 设备重启或应用更新后恢复所有定时任务闹钟
+ * 设备重启、应用更新、时区变更或重试用尽后恢复所有定时任务闹钟
+ *
+ * 不收 TIME_SET：闹钟是绝对时刻，调时钟不改变它对应的本地时刻；
+ * 往前调时到点的闹钟会立刻补发，这时重排反而会把它换成下一次
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED
-            && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED
-            && intent.action != AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
-        ) return
+        if (intent.action !in RESTORE_ACTIONS) return
         Timber.i("Schedule restore triggered by: %s", intent.action)
         val pendingResult = goAsync()
 
@@ -36,7 +36,9 @@ class BootReceiver : BroadcastReceiver() {
                     repository.isLoaded.filter { it }.first()
                 }
                 if (loaded == null) {
-                    Timber.w("Schedule restore: DataStore load timeout, skipping")
+                    // 读不到配置也要留个后手，否则要等用户手动打开 App 才能恢复
+                    Timber.w("Schedule restore: DataStore load timeout, resync later")
+                    alarmManager.scheduleResync()
                     return@launch
                 }
                 val strategies = repository.strategies.value
@@ -44,9 +46,20 @@ class BootReceiver : BroadcastReceiver() {
                 Timber.i("Schedule restore complete: %d strategies", strategies.size)
             } catch (e: Exception) {
                 Timber.e(e, "Schedule restore failed")
+                runCatching { alarmManager.scheduleResync() }
             } finally {
                 pendingResult.finish()
             }
         }
+    }
+
+    private companion object {
+        val RESTORE_ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED,
+            ScheduleAlarmManager.ACTION_SCHEDULE_RESYNC,
+        )
     }
 }

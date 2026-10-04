@@ -13,6 +13,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
@@ -86,6 +87,20 @@ class ScheduleTriggerHandlerTest {
         verify(exactly = 0) { alarms.scheduleNext(any(), any()) }
         verify(exactly = 0) { alarms.scheduleRetry(any(), any(), any()) }
         verify(exactly = 0) { pipeline.execute(any()) }
+        // 残留的重试槽要一起撤
+        verify(exactly = 2) { alarms.cancel(strategy.id) }
+        verify(exactly = 0) { alarms.markFired(any(), any()) }
+    }
+
+    @Test
+    fun firedSlotIsRecordedBeforeNextAlarm() = runBlocking {
+        coEvery { repository.getById(strategy.id) } returns strategy
+        every { pipeline.execute(any()) } returns Job().apply { complete() }
+        handler.handle(strategy.id, scheduledTime)
+        verifyOrder {
+            alarms.markFired(strategy.id, scheduledTime)
+            alarms.scheduleNext(strategy, scheduledTime)
+        }
     }
 
     @Test

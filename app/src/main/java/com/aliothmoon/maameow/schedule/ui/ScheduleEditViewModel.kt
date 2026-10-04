@@ -316,7 +316,7 @@ class ScheduleEditViewModel(
                     repository.update(strategy)
                 }
 
-                scheduleAlarmManager.cancel(strategy.id)
+                scheduleAlarmManager.cancel(strategy.id, keepRetry = true)
                 scheduleAlarmManager.scheduleNext(strategy)
 
                 // 检查关键权限

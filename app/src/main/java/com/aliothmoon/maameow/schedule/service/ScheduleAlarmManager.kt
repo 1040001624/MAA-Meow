@@ -4,7 +4,9 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Build
+import androidx.core.content.edit
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.model.ScheduleType
 import timber.log.Timber
@@ -18,6 +20,7 @@ class ScheduleAlarmManager(
 
     companion object {
         const val ACTION_SCHEDULE_TRIGGER = "com.aliothmoon.maameow.SCHEDULE_TRIGGER"
+        const val ACTION_SCHEDULE_RESYNC = "com.aliothmoon.maameow.SCHEDULE_RESYNC"
         const val EXTRA_STRATEGY_ID = "strategy_id"
         const val EXTRA_SCHEDULED_TIME = "scheduled_time"
         const val EXTRA_RETRY_COUNT = "retry_count"
@@ -25,11 +28,37 @@ class ScheduleAlarmManager(
         /** 配置持续不可读（如文件损坏）时不能无限拉起 FGS */
         const val MAX_RETRY_COUNT = 3
         private const val RETRY_DELAY_MS = 60_000L
+
+        /** 重试用尽后只做轻量重排，不拉 FGS */
+        const val RESYNC_DELAY_MS = 30 * 60_000L
+        private const val RESYNC_REQUEST_CODE = 0x5C4E
+
+        /** 固定时间策略认上次触发点的回拨窗口 */
+        const val FIXED_RESUME_WINDOW_MS = 24 * 60 * 60_000L
+
+        private const val FIRED_PREFS = "schedule_fired"
+
+        /**
+         * 重排起点：上次触发点仍在「未来」说明时钟往回拨过，从它之后排，免得同一时段再跑一遍
+         * 回拨超过一个周期（固定时间按 24 小时）视为时钟纠错，回到按当前时间算
+         */
+        fun resumeAfter(strategy: ScheduleStrategy, lastFiredMs: Long?, nowMs: Long): Long {
+            if (lastFiredMs == null || lastFiredMs <= nowMs) return 0L
+            val window = when (strategy.scheduleType) {
+                ScheduleType.FIXED_TIME -> FIXED_RESUME_WINDOW_MS
+                ScheduleType.INTERVAL -> (strategy.intervalMinutes ?: 0) * 60_000L
+            }
+            return if (lastFiredMs - nowMs <= window) lastFiredMs else 0L
+        }
     }
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     private val showIntent: PendingIntent by lazy { mainActivityPendingIntent(context) }
+
+    private val firedPrefs: SharedPreferences by lazy {
+        context.getSharedPreferences(FIRED_PREFS, Context.MODE_PRIVATE)
+    }
 
     /**
      * 按设定时间注册下一个闹钟，后台倒计时在触发后开始
@@ -57,10 +86,14 @@ class ScheduleAlarmManager(
         return true
     }
 
-    /** 配置暂不可读时保留本次触发，稍后重试；[retryCount] 为已重试次数，超限放弃 */
+    /**
+     * 配置暂不可读时保留本次触发，稍后重试；[retryCount] 为已重试次数
+     * 重试与下次触发各占一个槽，重排不会冲掉在等的重试；用尽后转为定期重排，定时链不断
+     */
     fun scheduleRetry(strategyId: String, scheduledTimeMs: Long, retryCount: Int = 0): Boolean {
         if (retryCount >= MAX_RETRY_COUNT) {
-            Timber.w("策略 [%s] 已重试 %d 次，放弃本次触发", strategyId, retryCount)
+            Timber.w("策略 [%s] 已重试 %d 次，放弃本次触发，改为稍后重排", strategyId, retryCount)
+            scheduleResync()
             return false
         }
         return register(
@@ -69,6 +102,31 @@ class ScheduleAlarmManager(
             System.currentTimeMillis() + RETRY_DELAY_MS,
             retryCount = retryCount + 1,
         )
+    }
+
+    /** 稍后从持久化配置整批重排，由 BootReceiver 处理 */
+    fun scheduleResync(): Boolean {
+        if (!canScheduleExact()) {
+            Timber.w("重排闹钟未注册：缺少精确闹钟权限")
+            return false
+        }
+        return try {
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(System.currentTimeMillis() + RESYNC_DELAY_MS, showIntent),
+                buildResyncPendingIntent(),
+            )
+            Timber.i("已注册 %d 分钟后重排闹钟", RESYNC_DELAY_MS / 60_000L)
+            true
+        } catch (e: SecurityException) {
+            Timber.w(e, "重排闹钟注册失败：精确闹钟权限已撤销")
+            false
+        }
+    }
+
+    /** 记下本次触发的时段，重排时据此防止时钟回拨导致重复执行 */
+    fun markFired(strategyId: String, scheduledTimeMs: Long) {
+        if (scheduledTimeMs <= 0L) return
+        firedPrefs.edit(commit = true) { putLong(strategyId, scheduledTimeMs) }
     }
 
     private fun register(
@@ -96,12 +154,19 @@ class ScheduleAlarmManager(
         }
     }
 
-    /** 取消策略的闹钟 */
-    fun cancel(strategyId: String) {
-        val pendingIntent = buildPendingIntent(strategyId, 0L)
+    /**
+     * 取消策略的闹钟；[keepRetry] 为 true 时只撤下次触发
+     * 编辑保存只换下次触发，在等的重试照常补跑
+     */
+    fun cancel(strategyId: String, keepRetry: Boolean = false) {
+        cancelSlot(buildPendingIntent(strategyId, 0L))
+        if (!keepRetry) cancelSlot(buildPendingIntent(strategyId, 0L, retryCount = 1))
+        Timber.i("已取消策略 [%s] 的闹钟，保留重试=%s", strategyId, keepRetry)
+    }
+
+    private fun cancelSlot(pendingIntent: PendingIntent) {
         alarmManager.cancel(pendingIntent)
         pendingIntent.cancel()
-        Timber.i("已取消策略 [%s] 的闹钟", strategyId)
     }
 
     /** API 31 起注册精确闹钟前须检查授权 */
@@ -114,12 +179,26 @@ class ScheduleAlarmManager(
     /** 31 以下没有那个系统开关页，入口要藏掉，否则点了什么也不会发生 */
     fun hasExactAlarmToggle(): Boolean = ExactAlarmSettings.hasToggle(Build.VERSION.SDK_INT)
 
-    /** 先撤后立：禁用与删除都会留下孤儿闹钟，重排时必须把已启用的整批过一遍 */
+    /**
+     * 先撤后立：禁用的连重试一起撤，启用的只换下次触发，在等的重试保留
+     * 起点见 [resumeAfter]
+     */
     fun rescheduleAll(strategies: List<ScheduleStrategy>) {
+        val now = System.currentTimeMillis()
+        val fired = firedPrefs.all
         strategies.forEach { strategy ->
-            cancel(strategy.id)
-            if (strategy.enabled) scheduleNext(strategy)
+            if (!strategy.enabled) {
+                cancel(strategy.id)
+                return@forEach
+            }
+            cancel(strategy.id, keepRetry = true)
+            scheduleNext(strategy, resumeAfter(strategy, fired[strategy.id] as? Long, now))
         }
+        cancelSlot(buildResyncPendingIntent())
+
+        val ids = strategies.mapTo(HashSet()) { it.id }
+        val stale = fired.keys.filterNot { it in ids }
+        if (stale.isNotEmpty()) firedPrefs.edit { stale.forEach(::remove) }
     }
 
     fun computeNextTrigger(strategy: ScheduleStrategy, afterEpochMs: Long = 0L): ZonedDateTime? {
@@ -189,6 +268,7 @@ class ScheduleAlarmManager(
         return Instant.ofEpochMilli(nextMs).atZone(ZoneId.systemDefault())
     }
 
+    /** 下次触发与重试按 requestCode 分槽，[retryCount] > 0 即重试槽 */
     private fun buildPendingIntent(
         strategyId: String,
         scheduledTimeMs: Long,
@@ -202,11 +282,25 @@ class ScheduleAlarmManager(
         }
         return PendingIntent.getBroadcast(
             context,
-            requestCode(strategyId),
+            requestCode(strategyId, retry = retryCount > 0),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
-    private fun requestCode(strategyId: String): Int = strategyId.hashCode() and 0x7FFFFFFF
+    private fun buildResyncPendingIntent(): PendingIntent {
+        val intent = Intent(ACTION_SCHEDULE_RESYNC).apply {
+            setClassName(context, "com.aliothmoon.maameow.schedule.receiver.BootReceiver")
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            RESYNC_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /** 下次触发沿用旧 requestCode，升级前挂好的闹钟仍能被撤 */
+    private fun requestCode(strategyId: String, retry: Boolean): Int =
+        (if (retry) "$strategyId#retry" else strategyId).hashCode() and 0x7FFFFFFF
 }
