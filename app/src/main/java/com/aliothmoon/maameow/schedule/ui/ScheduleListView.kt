@@ -281,9 +281,7 @@ fun ScheduleListView(
                     },
                     confirmButton = {
                         TextButton(onClick = {
-                            AutoStartHelper.intentFor(context, target)?.let {
-                                runCatching { context.startActivity(it) }
-                            }
+                            AutoStartHelper.launch(context, target)
                             autoStartTarget = null
                         }) { Text(stringResource(R.string.schedule_go_to_settings)) }
                     },

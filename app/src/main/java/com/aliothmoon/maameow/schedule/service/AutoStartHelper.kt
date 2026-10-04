@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
@@ -128,16 +129,30 @@ object AutoStartHelper {
 
     /** 命中即停：一台设备只会属于一家厂商，全扫要白做 8 次跨进程 resolveActivity */
     fun resolvableOemIds(context: Context): List<String> = listOfNotNull(
-        AUTOSTART_INTENTS
-            .firstOrNull { context.packageManager.resolveActivity(it.intent, 0) != null }
-            ?.id
+        AUTOSTART_INTENTS.firstOrNull { canLaunch(context, it.intent) }?.id
     )
+
+    /** 解析得到不代表打得开：未导出或要权限的页面 startActivity 会抛 SecurityException */
+    private fun canLaunch(context: Context, intent: Intent): Boolean {
+        val info = context.packageManager.resolveActivity(intent, 0)?.activityInfo ?: return false
+        if (!info.exported) return false
+        val permission = info.permission ?: return true
+        return context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /** 厂商页打不开就退到应用详情页，总得给用户一个能落脚的地方 */
+    fun launch(context: Context, target: AutoStartTarget): Boolean {
+        val primary = intentFor(context, target)
+        if (primary != null && runCatching { context.startActivity(primary) }.isSuccess) return true
+        if (target == AutoStartTarget.AppDetails) return false
+        return runCatching { context.startActivity(appDetailsIntent(context)) }.isSuccess
+    }
 
     /** null = 无需引导 */
     fun resolveTarget(context: Context): AutoStartTarget? =
         AutoStartResolution.select(resolvableOemIds(context), isKnownRestrictiveManufacturer())
 
-    fun intentFor(context: Context, target: AutoStartTarget): Intent? = when (target) {
+    private fun intentFor(context: Context, target: AutoStartTarget): Intent? = when (target) {
         is AutoStartTarget.Oem -> AUTOSTART_INTENTS.firstOrNull { it.id == target.id }?.intent
         AutoStartTarget.AppDetails -> appDetailsIntent(context)
     }
