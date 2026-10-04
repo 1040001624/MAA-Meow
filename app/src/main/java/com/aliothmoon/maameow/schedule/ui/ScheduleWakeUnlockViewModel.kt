@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
-import android.content.Context
+import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 class ScheduleWakeUnlockViewModel(
-    private val context: Context,
+    private val application: Application,
     private val appSettingsManager: AppSettingsManager,
     private val wakeUnlockEngine: WakeUnlockEngine,
     private val unlockGestureStore: UnlockGestureStore,
@@ -78,7 +78,7 @@ class ScheduleWakeUnlockViewModel(
                 },
             )
             // 测试会先息屏，没人持锁的话 CPU 可能在等待期间睡下去，解锁要拖到下次被唤醒
-            val wakeLock = ScheduleWakeLock.acquire(context, TEST_WAKE_TIMEOUT_MS)
+            val wakeLock = ScheduleWakeLock.acquire(application, TEST_WAKE_TIMEOUT_MS)
             val result = try {
                 wakeUnlockEngine.testUnlock(credential)
             } finally {
@@ -121,7 +121,7 @@ class ScheduleWakeUnlockViewModel(
             _gestureRecordState.value = GestureRecordState.Preparing
             // 同测试：锁屏到亮屏之间要持锁，录制结束或取消即释放
             val wakeLock = ScheduleWakeLock.acquire(
-                context,
+                application,
                 (RECORD_TIMEOUT_MS + RECORD_GRACE_MS).toLong(),
             )
             try {
