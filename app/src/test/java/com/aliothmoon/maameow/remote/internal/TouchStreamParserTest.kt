@@ -81,20 +81,48 @@ class TouchStreamParserTest {
     }
 
     @Test
-    fun coordsAreNotCarriedAcrossStrokes() {
+    fun repeatedTapAtSamePositionIsKept() {
         val f = Feeder()
         f.down(100, 200, t = 0)
         f.up(t = 50)
-        // 新触点先来 tracking id、坐标还没到，不该在旧位置补一个假点
+        // 内核按 slot 过滤未变化的轴：同一位置再按一次只有 tracking id
         f.raw(EV_ABS, ABS_MT_TRACKING_ID, 9)
+        f.raw(EV_KEY, BTN_TOUCH, 1)
         f.syn(t = 100)
-        f.raw(EV_ABS, ABS_MT_POSITION_X, 700)
-        f.raw(EV_ABS, ABS_MT_POSITION_Y, 800)
-        f.syn(t = 130)
         f.up(t = 160)
 
         assertEquals(2, f.parser.strokes.size)
-        assertEquals(listOf(100 to 200), f.parser.strokes[0].points.map { it.x to it.y })
+        assertEquals(listOf(100 to 200), f.parser.strokes[1].points.map { it.x to it.y })
+    }
+
+    @Test
+    fun unchangedAxisIsTakenFromSameSlot() {
+        val f = Feeder()
+        f.down(100, 200, t = 0)
+        f.up(t = 50)
+        // 只有 Y 变了
+        f.raw(EV_ABS, ABS_MT_TRACKING_ID, 9)
+        f.raw(EV_ABS, ABS_MT_POSITION_Y, 800)
+        f.raw(EV_KEY, BTN_TOUCH, 1)
+        f.syn(t = 100)
+        f.up(t = 160)
+
+        assertEquals(listOf(100 to 800), f.parser.strokes[1].points.map { it.x to it.y })
+    }
+
+    @Test
+    fun primaryOnAnotherSlotDoesNotInheritSlot0Coords() {
+        val f = Feeder()
+        f.down(100, 200, t = 0)
+        f.up(t = 50)
+        f.raw(EV_ABS, ABS_MT_SLOT, 1)
+        f.raw(EV_ABS, ABS_MT_TRACKING_ID, 9)
+        f.raw(EV_ABS, ABS_MT_POSITION_X, 700)
+        f.raw(EV_ABS, ABS_MT_POSITION_Y, 800)
+        f.syn(t = 100)
+        f.raw(EV_ABS, ABS_MT_TRACKING_ID, -1)
+        f.syn(t = 160)
+
         assertEquals(listOf(700 to 800), f.parser.strokes[1].points.map { it.x to it.y })
     }
 

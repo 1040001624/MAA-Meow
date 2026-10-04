@@ -56,6 +56,10 @@ class WakeUnlockEngine {
             WakeUnlockResult.RECORD_NO_TOUCH,
             uiTextOf(R.string.wake_result_record_no_touch),
         ),
+        RECORD_BUSY(
+            WakeUnlockResult.RECORD_BUSY,
+            uiTextOf(R.string.wake_result_record_busy),
+        ),
         IPC_FAILED(-1, uiTextOf(R.string.wake_result_ipc_failed)),
 
         /** App 侧拦截：任务运行中锁屏或注入会打断任务 */

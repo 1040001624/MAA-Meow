@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
+import android.content.Context
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.schedule.service.ScheduleWakeLock
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 class ScheduleWakeUnlockViewModel(
+    private val context: Context,
     private val appSettingsManager: AppSettingsManager,
     private val wakeUnlockEngine: WakeUnlockEngine,
     private val unlockGestureStore: UnlockGestureStore,
@@ -74,7 +77,14 @@ class ScheduleWakeUnlockViewModel(
                     ""
                 },
             )
-            _wakeTestState.value = WakeTestState.Done(wakeUnlockEngine.testUnlock(credential))
+            // 测试会先息屏，没人持锁的话 CPU 可能在等待期间睡下去，解锁要拖到下次被唤醒
+            val wakeLock = ScheduleWakeLock.acquire(context, TEST_WAKE_TIMEOUT_MS)
+            val result = try {
+                wakeUnlockEngine.testUnlock(credential)
+            } finally {
+                ScheduleWakeLock.release(wakeLock)
+            }
+            _wakeTestState.value = WakeTestState.Done(result)
         }
     }
 
@@ -109,13 +119,22 @@ class ScheduleWakeUnlockViewModel(
         }
         recordJob = viewModelScope.launch {
             _gestureRecordState.value = GestureRecordState.Preparing
-            if (!wakeUnlockEngine.startGestureRecord(RECORD_TIMEOUT_MS)) {
-                _gestureRecordState.value =
-                    GestureRecordState.Failed(WakeUnlockEngine.WakeResult.IPC_FAILED)
-                return@launch
+            // 同测试：锁屏到亮屏之间要持锁，录制结束或取消即释放
+            val wakeLock = ScheduleWakeLock.acquire(
+                context,
+                (RECORD_TIMEOUT_MS + RECORD_GRACE_MS).toLong(),
+            )
+            try {
+                if (!wakeUnlockEngine.startGestureRecord(RECORD_TIMEOUT_MS)) {
+                    _gestureRecordState.value =
+                        GestureRecordState.Failed(WakeUnlockEngine.WakeResult.IPC_FAILED)
+                    return@launch
+                }
+                _gestureRecordState.value = GestureRecordState.Recording
+                awaitRecordResult()
+            } finally {
+                ScheduleWakeLock.release(wakeLock)
             }
-            _gestureRecordState.value = GestureRecordState.Recording
-            awaitRecordResult()
         }
     }
 
@@ -185,5 +204,8 @@ class ScheduleWakeUnlockViewModel(
         const val RECORD_TIMEOUT_MS = 90_000
         const val RECORD_GRACE_MS = 15_000
         const val RECORD_POLL_INTERVAL_MS = 1_000L
+
+        /** 覆盖锁屏、息屏、亮屏与 PIN/手势注入的最长耗时 */
+        const val TEST_WAKE_TIMEOUT_MS = 30_000L
     }
 }

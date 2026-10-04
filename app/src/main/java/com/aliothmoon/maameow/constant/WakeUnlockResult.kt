@@ -26,4 +26,7 @@ object WakeUnlockResult {
 
     /** 录制期间一个触摸事件都没有，多半是指纹/人脸解锁 */
     const val RECORD_NO_TOUCH = 12
+
+    /** 上一轮录制还没收尾，新一轮没法开始 */
+    const val RECORD_BUSY = 13
 }

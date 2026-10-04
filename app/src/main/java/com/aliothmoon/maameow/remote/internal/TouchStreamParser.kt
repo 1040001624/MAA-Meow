@@ -27,6 +27,13 @@ internal class TouchStreamParser {
 
     private var curX = -1
     private var curY = -1
+
+    /**
+     * 协议 B 每个 slot 的最后坐标：内核按 slot 过滤未变化的轴，
+     * 同一位置再按一次只来 tracking id 不来坐标，得靠这里补上
+     */
+    private val slotX = IntArray(MAX_SLOTS) { -1 }
+    private val slotY = IntArray(MAX_SLOTS) { -1 }
     private var frameHasCoords = false
 
     /** 协议 A 一帧里的第几根手指，只认第 0 根 */
@@ -64,7 +71,12 @@ internal class TouchStreamParser {
             ABS_MT_TRACKING_ID -> {
                 usesTrackingId = true
                 if (value >= 0) {
-                    if (primarySlot == NO_SLOT) primarySlot = slot
+                    if (primarySlot == NO_SLOT) {
+                        primarySlot = slot
+                        // 本帧若有新坐标会随后覆盖
+                        curX = slotX.getOrElse(slot) { -1 }
+                        curY = slotY.getOrElse(slot) { -1 }
+                    }
                 } else if (slot == primarySlot) {
                     primarySlot = NO_SLOT
                 }
@@ -72,6 +84,7 @@ internal class TouchStreamParser {
 
             ABS_MT_POSITION_X -> {
                 usesMt = true
+                if (slot in slotX.indices) slotX[slot] = value
                 if (isPrimaryContact()) {
                     curX = value
                     frameHasCoords = true
@@ -80,6 +93,7 @@ internal class TouchStreamParser {
 
             ABS_MT_POSITION_Y -> {
                 usesMt = true
+                if (slot in slotY.indices) slotY[slot] = value
                 if (isPrimaryContact()) {
                     curY = value
                     frameHasCoords = true
@@ -128,9 +142,7 @@ internal class TouchStreamParser {
     private fun closeStroke(tMs: Int) {
         val points = current
         current = null
-        // 抬起后清掉坐标，免得下一次按下先补一个落在旧位置的假点
-        curX = -1
-        curY = -1
+        // 坐标不清：内核不重发未变化的轴，同一位置连点要沿用上次的值
         if (points == null || points.isEmpty()) return
         if (_strokes.size >= MAX_STROKES) return
         _strokes.add(TouchStroke(points, tMs.coerceAtLeast(points.last().tMs)))
@@ -155,6 +167,7 @@ internal class TouchStreamParser {
 
         const val MAX_POINTS_PER_STROKE = 4000
         const val MAX_STROKES = 128
+        const val MAX_SLOTS = 32
 
         private const val NO_SLOT = -1
     }
