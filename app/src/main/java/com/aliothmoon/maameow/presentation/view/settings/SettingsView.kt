@@ -208,11 +208,18 @@ fun SettingsView(
     val focusManager = LocalFocusManager.current
     val pendingSearch by searchNavigator.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingSearch) {
-        val location = pendingSearch?.entry?.location as? SettingLocation.Section ?: return@LaunchedEffect
+        val request = pendingSearch ?: return@LaunchedEffect
+        // 锚点没出现过的请求会一直挂着，回到本页时清掉，免得又跳又展开
+        if (!request.isFresh()) {
+            searchNavigator.consume(request)
+            return@LaunchedEffect
+        }
+        val location = request.entry.location as? SettingLocation.Section ?: return@LaunchedEffect
         settingsListState.scrollToItem(sectionItemIndex(location.sectionKey))
     }
-    fun revealToken(sectionKey: String) =
-        pendingSearch?.takeIf { (it.entry.location as? SettingLocation.Section)?.sectionKey == sectionKey }
+    fun revealToken(sectionKey: String) = pendingSearch?.takeIf {
+        it.isFresh() && (it.entry.location as? SettingLocation.Section)?.sectionKey == sectionKey
+    }
     fun openSearchResult(entry: SettingSearchEntry) {
         focusManager.clearFocus()
         searchQuery = ""
