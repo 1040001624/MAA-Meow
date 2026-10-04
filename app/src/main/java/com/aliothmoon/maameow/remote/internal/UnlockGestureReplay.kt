@@ -1,9 +1,12 @@
 package com.aliothmoon.maameow.remote.internal
 
-import android.view.Display
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import com.aliothmoon.maameow.domain.models.UnlockGesture
 import com.aliothmoon.maameow.domain.models.UnlockStep
-import com.aliothmoon.maameow.maa.InputControlUtils
+import com.aliothmoon.maameow.third.wrappers.InputManager
+import com.aliothmoon.maameow.third.wrappers.ServiceManager
 import kotlin.math.roundToInt
 
 internal sealed interface InjectAction {
@@ -62,35 +65,25 @@ internal object UnlockGestureReplay {
         return out
     }
 
-    /** 按时间轴注入到主屏；解锁发生在任务启动前，不会和 MAA 的触控抢 [InputControlUtils] */
+    /**
+     * 按时间轴注入到主屏
+     * 不走 InputControlUtils：那边的触点状态与 MAA 任务共用，后台模式跑任务时测解锁会互相打乱，
+     * 且会推给触控预览，等于把解锁轨迹广播出去
+     */
     fun execute(actions: List<InjectAction>) {
-        for (action in actions) {
-            when (action) {
-                is InjectAction.Sleep -> Thread.sleep(action.ms)
-                is InjectAction.Down ->
-                    InputControlUtils.down(
-                        action.x,
-                        action.y,
-                        InputControlUtils.SINGLE_CONTACT,
-                        Display.DEFAULT_DISPLAY
-                    )
-
-                is InjectAction.Move ->
-                    InputControlUtils.move(
-                        action.x,
-                        action.y,
-                        InputControlUtils.SINGLE_CONTACT,
-                        Display.DEFAULT_DISPLAY
-                    )
-
-                is InjectAction.Up ->
-                    InputControlUtils.up(
-                        action.x,
-                        action.y,
-                        InputControlUtils.SINGLE_CONTACT,
-                        Display.DEFAULT_DISPLAY
-                    )
+        val touch = SingleTouch()
+        try {
+            for (action in actions) {
+                when (action) {
+                    is InjectAction.Sleep -> Thread.sleep(action.ms)
+                    is InjectAction.Down -> touch.down(action.x, action.y)
+                    is InjectAction.Move -> touch.move(action.x, action.y)
+                    is InjectAction.Up -> touch.up(action.x, action.y)
+                }
             }
+        } finally {
+            // 中途被打断也别把手指留在屏上
+            touch.cancelIfPressed()
         }
     }
 
@@ -99,4 +92,62 @@ internal object UnlockGestureReplay {
         InjectAction.Sleep(holdMs.coerceAtLeast(0)),
         InjectAction.Up(x, y),
     )
+}
+
+/** 回放专用单指注入，状态只活在一次回放里 */
+private class SingleTouch {
+    private val input = ServiceManager.getInputManager()
+    private var downTime = 0L
+    private var pressed = false
+    private var lastX = 0
+    private var lastY = 0
+
+    fun down(x: Int, y: Int) {
+        if (pressed) cancelIfPressed()
+        downTime = SystemClock.uptimeMillis()
+        // DOWN 等系统收下再继续，与 InputControlUtils 一致
+        pressed = inject(MotionEvent.ACTION_DOWN, x, y, InputManager.INJECT_INPUT_EVENT_MODE_WAIT_FOR_FINISH)
+    }
+
+    fun move(x: Int, y: Int) {
+        if (pressed) inject(MotionEvent.ACTION_MOVE, x, y, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
+    }
+
+    fun up(x: Int, y: Int) {
+        if (!pressed) return
+        inject(MotionEvent.ACTION_UP, x, y, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
+        pressed = false
+    }
+
+    fun cancelIfPressed() {
+        if (!pressed) return
+        inject(MotionEvent.ACTION_CANCEL, lastX, lastY, InputManager.INJECT_INPUT_EVENT_MODE_ASYNC)
+        pressed = false
+    }
+
+    private fun inject(action: Int, x: Int, y: Int, mode: Int): Boolean {
+        lastX = x
+        lastY = y
+        val props = MotionEvent.PointerProperties().apply {
+            id = 0
+            toolType = MotionEvent.TOOL_TYPE_FINGER
+        }
+        val lifting = action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL
+        val coords = MotionEvent.PointerCoords().apply {
+            this.x = x.toFloat()
+            this.y = y.toFloat()
+            pressure = if (lifting) 0f else 1f
+            size = 1f
+        }
+        val event = MotionEvent.obtain(
+            downTime, SystemClock.uptimeMillis(), action,
+            1, arrayOf(props), arrayOf(coords),
+            0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0,
+        )
+        return try {
+            input.injectInputEvent(event, mode)
+        } finally {
+            event.recycle()
+        }
+    }
 }

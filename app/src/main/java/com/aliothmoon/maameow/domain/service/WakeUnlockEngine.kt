@@ -56,7 +56,10 @@ class WakeUnlockEngine {
             WakeUnlockResult.RECORD_NO_TOUCH,
             uiTextOf(R.string.wake_result_record_no_touch),
         ),
-        IPC_FAILED(-1, uiTextOf(R.string.wake_result_ipc_failed));
+        IPC_FAILED(-1, uiTextOf(R.string.wake_result_ipc_failed)),
+
+        /** App 侧拦截：任务运行中锁屏或注入会打断任务 */
+        TASK_RUNNING(-2, uiTextOf(R.string.wake_result_task_running));
 
         val isSuccess: Boolean get() = this == OK
 

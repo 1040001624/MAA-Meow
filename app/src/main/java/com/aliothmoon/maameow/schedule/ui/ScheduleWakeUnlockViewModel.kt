@@ -9,7 +9,9 @@ import com.aliothmoon.maameow.domain.models.GestureRecordResult
 import com.aliothmoon.maameow.domain.models.GestureRecordStatus
 import com.aliothmoon.maameow.domain.models.UnlockCredential
 import com.aliothmoon.maameow.domain.models.UnlockGesture
+import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.WakeUnlockEngine
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +24,16 @@ class ScheduleWakeUnlockViewModel(
     private val appSettingsManager: AppSettingsManager,
     private val wakeUnlockEngine: WakeUnlockEngine,
     private val unlockGestureStore: UnlockGestureStore,
+    private val compositionService: MaaCompositionService,
 ) : ViewModel() {
+
+    /** 锁屏和注入都会打断正在跑的任务 */
+    private val taskActive: Boolean
+        get() = compositionService.state.value.let {
+            it == MaaExecutionState.STARTING ||
+                    it == MaaExecutionState.RUNNING ||
+                    it == MaaExecutionState.STOPPING
+        }
 
     val wakeUnlockType: StateFlow<String> = appSettingsManager.wakeUnlockType
 
@@ -47,6 +58,10 @@ class ScheduleWakeUnlockViewModel(
 
     fun runWakeTest() {
         if (_wakeTestState.value == WakeTestState.Testing) return
+        if (taskActive) {
+            _wakeTestState.value = WakeTestState.Done(WakeUnlockEngine.WakeResult.TASK_RUNNING)
+            return
+        }
         viewModelScope.launch {
             _wakeTestState.value = WakeTestState.Testing
             val type = appSettingsManager.wakeUnlockType.value
@@ -87,6 +102,11 @@ class ScheduleWakeUnlockViewModel(
 
     fun startGestureRecord() {
         if (recordJob?.isActive == true) return
+        if (taskActive) {
+            _gestureRecordState.value =
+                GestureRecordState.Failed(WakeUnlockEngine.WakeResult.TASK_RUNNING)
+            return
+        }
         recordJob = viewModelScope.launch {
             _gestureRecordState.value = GestureRecordState.Preparing
             if (!wakeUnlockEngine.startGestureRecord(RECORD_TIMEOUT_MS)) {

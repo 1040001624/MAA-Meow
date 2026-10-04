@@ -197,6 +197,7 @@ internal object GestureRecorder {
 
         // 必须在录制当时采样：解锁后可能已经转到别的方向，拿桌面的方向映射会整体偏掉
         val screen = ScreenGeometry.current()
+            ?: return Outcome(WakeUnlockResult.UNSUPPORTED)
         // 紧接着开采，中间不留缓冲，免得漏掉用户的第一下
         startedAt.set(SystemClock.uptimeMillis())
         collecting.set(true)

@@ -158,6 +158,7 @@ object WakeUnlockController {
         // bouncer 弹出期间 isKeyguardLocked 仍为 true，先 settle
         val settleMs = bouncerSettleMs(wakeCostMs)
         Thread.sleep(settleMs)
+        keyguardGoneBeforeInject(wm, "PIN")?.let { return it }
         Ln.i(
             "$TAG: injecting ${credential.length} PIN digits after ${settleMs}ms settle" +
                     " (wake ${wakeCostMs}ms)"
@@ -206,7 +207,7 @@ object WakeUnlockController {
         wakeAndRequireKeyguard(pm, wm)?.let { return it }
 
         // 与录制一致，在 keyguard 还在时采样
-        val screen = ScreenGeometry.current()
+        val screen = ScreenGeometry.current() ?: return WakeUnlockResult.UNSUPPORTED
         if (screen.rotation != gesture.rotation) {
             Ln.w("$TAG: rotation ${screen.rotation} != recorded ${gesture.rotation}")
             return WakeUnlockResult.GESTURE_SCREEN_MISMATCH
@@ -220,6 +221,7 @@ object WakeUnlockController {
 
         // 录制起点就是亮屏后的锁屏首屏，这里不能再 dismissKeyguard 打乱状态
         Thread.sleep(GESTURE_SETTLE_MS)
+        keyguardGoneBeforeInject(wm, "gesture")?.let { return it }
         val actions = UnlockGestureReplay.timeline(gesture, screen.width, screen.height)
         Ln.i("$TAG: replaying ${gesture.steps.size} steps / ${actions.size} actions")
         UnlockGestureReplay.execute(actions)
@@ -233,6 +235,24 @@ object WakeUnlockController {
             WakeUnlockResult.CREDENTIAL_REJECTED
         }
     }
+
+    /**
+     * 等待期间可能已被用户或其他途径解开，此时再注入 PIN 会打进前台应用、手势会点到桌面
+     * @return 非 null 即不该注入，调用方直接返回
+     */
+    private fun keyguardGoneBeforeInject(wm: WindowManager, what: String): Int? =
+        when (wm.isKeyguardLocked) {
+            true -> null
+            false -> {
+                Ln.i("$TAG: keyguard gone before $what injection, skipped")
+                WakeUnlockResult.OK
+            }
+
+            null -> {
+                Ln.w("$TAG: isKeyguardLocked unavailable before $what injection")
+                WakeUnlockResult.UNSUPPORTED
+            }
+        }
 
     /** 只亮屏，不碰 keyguard；录制手势时用，和回放走同一条唤醒路径 */
     fun wakeScreen(): Boolean = ensureScreenOn(ServiceManager.getPowerManager())
