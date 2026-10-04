@@ -399,7 +399,7 @@ private fun SettingWakeTestRow(
     onTest: () -> Unit,
 ) {
     val isGesture = type == AppSettingsManager.WAKE_TYPE_GESTURE
-    // 没录手势时凭证会退化成滑动解锁，测出来的不是用户选的方式
+    // 没录手势时凭证会退化成无密码，测出来的不是用户选的方式
     val missingGesture = isGesture && !gestureRecorded
     SettingRow(
         title = stringResource(R.string.settings_wake_test_button),

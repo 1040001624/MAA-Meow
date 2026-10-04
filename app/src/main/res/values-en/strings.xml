@@ -142,7 +142,7 @@
     <string name="dialog_enable_force_fullscreen_title">Enable background force fullscreen?</string>
     <string name="dialog_enable_force_fullscreen_message">This may not work on every device and can cause compatibility issues. Continue?</string>
     <string name="settings_wake_unlock_type">Schedule unlock method</string>
-    <string name="settings_wake_unlock_type_swipe">Swipe unlock</string>
+    <string name="settings_wake_unlock_type_swipe">No password</string>
     <string name="settings_wake_unlock_type_pin">PIN</string>
     <string name="settings_wake_unlock_type_gesture">Manual recording</string>
     <string name="settings_wake_swipe_desc">Turns the screen on and dismisses the lock screen directly. Works only when no password is set (no lock or swipe to enter). If a PIN, pattern or password is set, use Manual recording or PIN instead</string>
