@@ -64,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -1329,8 +1330,10 @@ private fun SettingPenguinIdField(
     onIdChange: (String) -> Unit,
 ) {
     var localId by rememberSaveable { mutableStateOf(penguinId) }
-    LaunchedEffect(penguinId) {
-        if (penguinId != localId) localId = penguinId
+    var focused by remember { mutableStateOf(false) }
+    // 见 SettingSecretField
+    LaunchedEffect(penguinId, focused) {
+        if (!focused && penguinId != localId) localId = penguinId
     }
     OutlinedTextField(
         value = localId,
@@ -1344,7 +1347,8 @@ private fun SettingPenguinIdField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = MaaDesignTokens.Spacing.lg, vertical = 8.dp),
+            .padding(horizontal = MaaDesignTokens.Spacing.lg, vertical = 8.dp)
+            .onFocusChanged { focused = it.isFocused },
     )
 }
 
@@ -1359,8 +1363,10 @@ internal fun SettingSecretField(
 ) {
     var local by rememberSaveable { mutableStateOf(value) }
     var visible by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(value) {
-        if (value != local) local = value
+    var focused by remember { mutableStateOf(false) }
+    // 每次按键各自落盘，输入期间回流的是上一拍的旧值，接了就会冲掉刚打的字；失焦后再对齐
+    LaunchedEffect(value, focused) {
+        if (!focused && value != local) local = value
     }
     OutlinedTextField(
         value = local,
@@ -1388,7 +1394,9 @@ internal fun SettingSecretField(
                 )
             }
         },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { focused = it.isFocused },
     )
 }
 
